@@ -29,6 +29,24 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 - [x] **M6 Polish** — cameras, gates + lap timer, prop-wash, battery, GH Pages deploy workflow, README
 - [x] **M7 Verify** — headless browser smoke test + screenshot, physics tests green
 
+## Phase 2 — Velocidrone-style features (no multiplayer)
+
+- [ ] **M8 Contact physics + turtle + wind** — multi-point rigid-body contacts (quad tips/rests realistically),
+  reversible motors, Betaflight turtle mode (switch / `T`), wind + gusts
+- [ ] **M9 Quad classes + detailed models** — presets (5" race, 5" freestyle, 3" toothpick, cinewhoop,
+  7" long range, 65mm tiny whoop) with high-poly procedural models (twisted 3-blade props, motor bells, ducts…)
+- [ ] **M10 Motor audio** — WebAudio synth: per-motor whine + blade-pass tones, prop wash, impacts, volume
+- [ ] **M11 Game modes** — tracks (3 built-in + custom), track editor, race mode (countdown, laps, missed gates,
+  results), time-trial ghost of best lap, local leaderboards, DVR replay
+- [ ] **M12 Video & environment** — post-FX (fisheye, analog static/breakup by range & walls, digital HD look),
+  time-of-day presets, CC0 HDRI image-based lighting (@pmndrs/assets → Poly Haven)
+- [ ] **M13 Visual upgrade** — PBR procedural textures (normal + roughness), detailed props (barrels, pallets,
+  rebar, stairs, fences, lamps, tyres), optional `npm run fetch-assets` for CC0 Poly Haven textures
+- [ ] **M14 Betaflight CLI import, UI, docs, verification**
+
+Note: asset hosts api.polyhaven.com / dl.polyhaven.org / ambientcg.com are blocked by this cloud
+environment's network policy, so real photo textures are fetched by a script the user runs locally.
+
 ## Progress log
 
 - **M1–M2** Vite + Three.js scaffold; 1 kHz physics/PID loop. Headless tests: hover ≈30% throttle,
