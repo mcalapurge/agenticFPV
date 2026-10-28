@@ -42,7 +42,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
   time-of-day presets, CC0 HDRI image-based lighting (@pmndrs/assets → Poly Haven)
 - [x] **M13 Visual upgrade** — PBR procedural textures (normal + roughness), detailed props (barrels, pallets,
   rebar, stairs, fences, lamps, tyres), optional `npm run fetch-assets` for CC0 Poly Haven textures
-- [ ] **M14 Betaflight CLI import, UI, docs, verification**
+- [x] **M14 Betaflight CLI import, UI, docs, verification**
 
 Note: asset hosts api.polyhaven.com / dl.polyhaven.org / ambientcg.com are blocked by this cloud
 environment's network policy, so real photo textures are fetched by a script the user runs locally.
@@ -102,3 +102,17 @@ environment's network policy, so real photo textures are fetched by a script the
   exposed rebar, chain-link fencing (alpha, colliders), 12 street lamps, 1.8k instanced weed tufts.
   `npm run fetch-assets` pulls CC0 Poly Haven textures into public/textures + manifest (verified against a mock
   API; game auto-switches to photo textures when present, falls back to procedural otherwise).
+- **M14** Betaflight CLI `diff all`/`dump` import (active PID + rate profile; PIDs/FF, TPA, filters, idle,
+  airmode, Actual/BF rates, throttle curve) with unit test + PIDs-tab UI. Help/README updated. Turtle test made
+  deterministic (release stick when flipped). Final browser run: no console errors; editor place/save; PB ghost
+  shows on next lap; CLI import via UI; analog/digital link degrade behind walls. Budget: ~177k tris, ~300
+  draws, physics ≈30 ms CPU per simulated second. `npm test`: 18/18 (stable over 6 runs).
+
+## Known limitations / next ideas
+
+- Headless CI renders with SwiftShader (~6 fps), so in-browser checks are scripted; real-GPU frame rate is
+  not measured here.
+- Real photo textures need `npm run fetch-assets` on a machine with internet access (Poly Haven was not
+  reachable from the build environment).
+- Ideas: merge quad-model meshes to cut draw calls, more maps, multi-quad ghost comparison, VR/goggle output,
+  FPV-view props option, gyro noise spectrum / RPM filter simulation.

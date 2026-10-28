@@ -6,6 +6,7 @@ import { CHANNELS, INPUT_PRESETS, CalibrationWizard } from '../input/input.js';
 import { QUAD_PRESETS, applyPreset } from '../sim/presets.js';
 import { allTracks, getRecord, loadUserTracks, saveUserTracks } from '../game/tracks.js';
 import { TIME_OF_DAY } from '../render/environment.js';
+import { applyBetaflightCli } from '../sim/bfcli.js';
 import { fmtTime } from './osd.js';
 
 const h = (tag, attrs = {}, ...children) => {
@@ -208,7 +209,8 @@ export class SettingsMenu {
     if (f.type === 'select') {
       const sel = h('select', { onchange: (e) => { setPath(this.config, f.path, f.num ? +e.target.value : e.target.value); this._changed(f.path); this.render(); } },
         Object.entries(f.options).map(([k, l]) => { const o = h('option', { value: k }, l); if (String(k) === String(v)) o.selected = true; return o; }));
-      return h('div', { class: 'row' }, label, sel, h('span'));
+      sel.style.gridColumn = '2 / 4';
+      return h('div', { class: 'row' }, label, sel);
     }
     const range = h('input', { type: 'range', min: f.min, max: f.max, step: f.step });
     const num = h('input', { type: 'number', min: f.min, max: f.max, step: f.step });
@@ -575,7 +577,25 @@ export class SettingsMenu {
     };
     master.append(slider('Master multiplier', ['p', 'i', 'd', 'f']), slider('P & D gain', ['p', 'd']), slider('Feedforward', ['f']), slider('I gain', ['i']));
 
+    const cliBox = h('div', { class: 'wizard', style: 'display:none' });
+    const cliText = h('textarea', { rows: 8, placeholder: 'Paste the output of `diff all` (or `dump`) from the Betaflight CLI…', style: 'width:100%;background:#0b0c0f;color:var(--text);border:1px solid #343a45;border-radius:6px;font:12px ui-monospace,monospace;padding:8px' });
+    const cliOut = h('pre', { class: 'hint', style: 'white-space:pre-wrap;max-height:160px;overflow:auto' });
+    cliBox.append(
+      h('p', {}, 'Paste a Betaflight CLI diff to import PIDs, feedforward, TPA, filters, idle, airmode and rates (active profile and rate profile are used).'),
+      cliText,
+      h('p', {},
+        h('button', { class: 'btn primary', onclick: () => {
+          const changes = applyBetaflightCli(this.config, cliText.value);
+          if (!changes.length) { cliOut.textContent = 'Nothing recognised — make sure you pasted `set …` lines.'; return; }
+          this._changed('all');
+          this.render();
+          this.onToast?.(`Imported ${changes.length - 1} settings from Betaflight`);
+        } }, 'Import'), ' ',
+        h('button', { class: 'btn', onclick: () => { cliBox.style.display = 'none'; } }, 'Cancel')),
+      cliOut,
+    );
     body.append(
+      h('div', { class: 'section' }, h('button', { class: 'btn', onclick: () => { cliBox.style.display = 'block'; cliText.focus(); } }, 'Import from Betaflight CLI…'), cliBox),
       h('div', { class: 'section' }, h('h3', {}, 'PID profile (Betaflight scaling)'), table,
         h('p', { class: 'hint' }, 'Numbers use Betaflight’s internal scaling, so a real tune is a good starting point. Press B in flight to show the setpoint-vs-gyro trace.')),
       h('div', { class: 'section' }, h('h3', {}, 'Simplified tuning'), master),
@@ -606,9 +626,13 @@ export class SettingsMenu {
         h('p', {}, '1. Plug in your radio in USB Joystick mode (or a gamepad) and run the calibration wizard in the Controller tab.'),
         h('p', {}, '2. Map your arm switch. Arming requires throttle at zero, like Betaflight.'),
         h('p', {}, '3. Fly! Acro mode is the default. Switch to Angle mode in the PIDs tab, or map a switch, if you are learning.'),
-        h('p', {}, 'Race gates are placed around the map. Fly through them in order (the next gate is highlighted in the OSD) to log lap times.')),
+        h('p', {}, 'Race tab: Free fly, Practice (endless laps + ghost of your PB), Race (countdown, laps, results, leaderboard) or the Track editor. The next gate glows green, the one after yellow; the OSD arrow points to it when off-screen.'),
+        h('p', {}, 'Quad tab: pick a class (5" freestyle/race, 3" toothpick, cinewhoop, 7" long range, tiny whoop). PIDs tab: tune, or paste a Betaflight CLI diff.'),
+        h('p', {}, 'Crashed upside-down? Disarm, turn on turtle mode (switch or T), arm, and push the stick toward the side to flip over. Then disarm, turtle off, re-arm.')),
       h('div', { class: 'section' }, h('h3', {}, 'Keys'),
-        h('p', {}, k('Esc'), ' / ', k('Tab'), ' menu · ', k('R'), ' reset to launch pad · ', k('C'), ' cycle camera · ', k('M'), ' acro/angle · ', k('B'), ' blackbox trace · ', k('H'), ' toggle help overlay'),
+        h('p', {}, k('Esc'), ' / ', k('Tab'), ' menu · ', k('R'), ' reset / restart race · ', k('C'), ' camera (FPV, chase, LOS, orbit) · ', k('M'), ' acro/angle · ', k('T'), ' turtle mode · ', k('B'), ' blackbox trace · ', k('H'), ' help'),
+        h('p', {}, k('P'), ' replay (last 90 s): ', k('←'), k('→'), ' seek · ', k('↑'), k('↓'), ' speed · ', k('Space'), ' pause · ', k('C'), ' camera'),
+        h('p', {}, 'Track editor: ', k('G'), ' place gate ahead of the quad · ', k('Backspace'), ' remove last gate · save from the Race tab'),
         h('p', {}, 'Keyboard flying: ', k('W'), k('S'), ' throttle · ', k('X'), ' cut throttle · ', k('A'), k('D'), ' yaw · arrows pitch/roll · ', k('Space'), ' arm/disarm')),
     );
   }

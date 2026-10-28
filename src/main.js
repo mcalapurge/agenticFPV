@@ -336,6 +336,6 @@ requestAnimationFrame(frame);
 
 // Expose for debugging / automated smoke tests.
 window.__fpv = {
-  audio, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad, textureSource: map.textureSource,
+  audio, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, renderer, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad, textureSource: map.textureSource,
   get quadModel() { return quadModel; },
 };

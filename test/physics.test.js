@@ -100,9 +100,14 @@ test('turtle mode flips an inverted quad back over', () => {
   assert.ok(upY(sim.quad) < -0.9, 'starts inverted');
   sim.fc.armed = true;
   sim.fc.turtle = true;
-  runCollide(sim, 1.5, { throttle: 0, roll: 1, pitch: 0, yaw: 0 });
+  // Like a pilot: hold the stick until it tips past vertical, then let go and disarm.
+  let t = 0;
+  while (upY(sim.quad) < 0.2 && t < 3) {
+    runCollide(sim, 0.01, { throttle: 0, roll: 1, pitch: 0, yaw: 0 });
+    t += 0.01;
+  }
   sim.fc.armed = false;
-  runCollide(sim, 1.5, { throttle: 0, roll: 0, pitch: 0, yaw: 0 });
+  runCollide(sim, 2, { throttle: 0, roll: 0, pitch: 0, yaw: 0 });
   console.log(`after turtle upY=${upY(sim.quad).toFixed(2)}`);
   assert.ok(upY(sim.quad) > 0.9, 'quad should be upright');
 });
