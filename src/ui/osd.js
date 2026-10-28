@@ -13,7 +13,7 @@ export class OSD {
     this.sticks = sticksCanvas;
     this.bb = blackboxCanvas;
     this.els = {};
-    for (const k of ['tl', 'tr', 'bl', 'br', 'tc', 'center', 'warn', 'bc', 'lap']) {
+    for (const k of ['tl', 'tr', 'bl', 'br', 'tc', 'center', 'warn', 'bc', 'lap', 'perf']) {
       const el = document.createElement('div');
       el.className = `el ${k}`;
       root.append(el);
@@ -50,6 +50,8 @@ export class OSD {
     this.els.lap.classList.toggle('big', big);
     this.set('lap', lap || '');
     this.set('bc', '');
+    this.els.perf.style.display = config.camera.showPerf && s.perf ? '' : 'none';
+    if (config.camera.showPerf && s.perf) this.set('perf', s.perf);
 
     // Sticks overlay (Mode 2)
     const cs = this.sticks;

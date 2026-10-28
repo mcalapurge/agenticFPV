@@ -84,6 +84,7 @@ const SCHEMA = {
       { path: 'camera.tilt', label: 'Camera uptilt', unit: '°', min: -10, max: 70, step: 1 },
       { path: 'camera.showOsd', label: 'Show OSD', type: 'bool' },
       { path: 'camera.showSticks', label: 'Show stick overlay', type: 'bool' },
+      { path: 'camera.showPerf', label: 'Show performance stats (F)', type: 'bool' },
     ] },
     { title: 'Video link', fields: [
       { path: 'video.system', label: 'Video system', type: 'select', options: { analog: 'Analog (static & breakup)', digital: 'Digital HD (blocky / freeze)', clean: 'Clean (no link sim)' } },
@@ -189,6 +190,10 @@ export class SettingsMenu {
     if (fn) fn();
     else this._schemaTab(body, SCHEMA[this.tab]);
     if (this.tab === 'physics') this._physicsDerived(body);
+    if (this.tab === 'camera' && this.gpu) {
+      body.prepend(h('div', { class: 'section' }, h('div', { class: this.gpu.software ? 'warnline' : 'derived' },
+        `GPU: ${this.gpu.label} · ${this.gpu.webgl2 ? 'WebGL 2' : 'WebGL 1'}${this.gpu.software ? ' · SOFTWARE RENDERING — enable hardware acceleration in your browser' : ' · hardware accelerated'}`)));
+    }
   }
 
   update() {
@@ -630,7 +635,7 @@ export class SettingsMenu {
         h('p', {}, 'Quad tab: pick a class (5" freestyle/race, 3" toothpick, cinewhoop, 7" long range, tiny whoop). PIDs tab: tune, or paste a Betaflight CLI diff.'),
         h('p', {}, 'Crashed upside-down? Disarm, turn on turtle mode (switch or T), arm, and push the stick toward the side to flip over. Then disarm, turtle off, re-arm.')),
       h('div', { class: 'section' }, h('h3', {}, 'Keys'),
-        h('p', {}, k('Esc'), ' / ', k('Tab'), ' menu · ', k('R'), ' reset / restart race · ', k('C'), ' camera (FPV, chase, LOS, orbit) · ', k('M'), ' acro/angle · ', k('T'), ' turtle mode · ', k('B'), ' blackbox trace · ', k('H'), ' help'),
+        h('p', {}, k('F'), ' performance stats · ', k('Esc'), ' / ', k('Tab'), ' menu · ', k('R'), ' reset / restart race · ', k('C'), ' camera (FPV, chase, LOS, orbit) · ', k('M'), ' acro/angle · ', k('T'), ' turtle mode · ', k('B'), ' blackbox trace · ', k('H'), ' help'),
         h('p', {}, k('P'), ' replay (last 90 s): ', k('←'), k('→'), ' seek · ', k('↑'), k('↓'), ' speed · ', k('Space'), ' pause · ', k('C'), ' camera'),
         h('p', {}, 'Track editor: ', k('G'), ' place gate ahead of the quad · ', k('Backspace'), ' remove last gate · save from the Race tab'),
         h('p', {}, 'Keyboard flying: ', k('W'), k('S'), ' throttle · ', k('X'), ' cut throttle · ', k('A'), k('D'), ' yaw · arrows pitch/roll · ', k('Space'), ' arm/disarm')),

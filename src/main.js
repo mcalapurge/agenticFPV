@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { loadConfig } from './config.js';
+import { loadConfig, saveConfig } from './config.js';
 import { FlightController } from './sim/flightController.js';
 import { Quad } from './sim/quad.js';
 import { CollisionWorld } from './sim/collision.js';
@@ -12,6 +12,7 @@ import { OSD } from './ui/osd.js';
 import { MotorAudio } from './audio/motorAudio.js';
 import { Environment } from './render/environment.js';
 import { PostFX } from './render/postfx.js';
+import { detectGpu, gpuLabel } from './render/gpuInfo.js';
 import { Game } from './game/game.js';
 import { Replay } from './game/replay.js';
 
@@ -28,6 +29,9 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
+const gpu = detectGpu(renderer);
+gpu.label = gpuLabel(gpu);
+console.info(`[agenticFPV] GPU: ${gpu.name} (${gpu.vendor}) — ${gpu.software ? 'SOFTWARE' : 'hardware'} rendering`);
 const env = new Environment(renderer, scene);
 const post = new PostFX(renderer);
 
@@ -115,6 +119,7 @@ const menu = new SettingsMenu(document.getElementById('menu'), config, {
   onClose: () => { lastTime = performance.now(); },
 });
 menu.onToast = toast;
+menu.gpu = gpu;
 
 // ── Input bindings ────────────────────────────────────────────────────────
 const CAMERA_MODES = ['fpv', 'chase', 'los', 'orbit'];
@@ -161,6 +166,11 @@ input.keyHook = (k, e) => {
     if (k === 'backspace') { game.removeLastGate(); return true; }
   }
   if (k === 'b' && !e.repeat) { osd.toggleBlackbox(); return true; }
+  if (k === 'f' && !e.repeat) {
+    config.camera.showPerf = !config.camera.showPerf;
+    saveConfig(config);
+    return true;
+  }
   return false;
 };
 
@@ -277,8 +287,16 @@ function updateCamera(frameDt, subject) {
   camera.updateProjectionMatrix();
 }
 
+// Exponentially smoothed timings for the performance readout (F).
+const perf = { frameMs: 0, physMs: 0, renderMs: 0, steps: 0 };
+const ema = (prev, v, k = 0.1) => (prev === 0 ? v : prev + (v - prev) * k);
+function perfText() {
+  return `${(1000 / Math.max(1e-3, perf.frameMs)).toFixed(0)} FPS  ${perf.frameMs.toFixed(1)}ms\nPHYS ${perf.physMs.toFixed(2)}ms (${perf.steps} steps)\nRENDER CPU ${perf.renderMs.toFixed(2)}ms\n${gpu.software ? 'SOFTWARE GL' : gpu.label.slice(0, 28).toUpperCase()}`;
+}
+
 function frame(now) {
   requestAnimationFrame(frame);
+  const frameStart = lastTime;
   const frameDt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   const rc = input.poll(frameDt);
@@ -289,12 +307,15 @@ function frame(now) {
     updateArming(rc);
     accumulator += frameDt;
     let steps = 0;
+    const physStart = performance.now();
     while (accumulator >= DT && steps < MAX_STEPS_PER_FRAME) {
       quad.step(DT, fc.update(rc, quad.gyro, quad.attitude), collide);
       accumulator -= DT;
       steps++;
     }
     if (steps >= MAX_STEPS_PER_FRAME) accumulator = 0;
+    perf.physMs = ema(perf.physMs, performance.now() - physStart);
+    perf.steps = steps;
     state.simTime += frameDt;
     if (state.armed) state.flightTime += frameDt;
     if (config.physics.crashEnabled && quad.lastImpact > config.physics.crashSpeed) {
@@ -325,17 +346,29 @@ function frame(now) {
   const lapText = replay.active ? replay.label() : game.osdText(camera);
   osd.update({
     config, quad, fc, rc, armed: state.armed, flightTime: state.flightTime, warning: replay.active ? '' : state.warning,
-    lap: lapText, signal: state.signal, big: game.mode === 'race' && game.phase === 'countdown' && !replay.active,
+    lap: lapText, signal: state.signal, perf: config.camera.showPerf ? perfText() : '', big: game.mode === 'race' && game.phase === 'countdown' && !replay.active,
   });
+  const renderStart = performance.now();
   post.render(scene, camera, videoFx(now / 1000), now / 1000);
+  perf.renderMs = ema(perf.renderMs, performance.now() - renderStart);
+  perf.frameMs = ema(perf.frameMs, (now - frameStart) || frameDt * 1000);
 }
 
 loadingEl.classList.add('done');
+if (gpu.software) {
+  const w = document.getElementById('gpuwarn');
+  w.innerHTML = `<b>Hardware acceleration is off.</b> Your browser is rendering with <code>${gpu.name.replace(/[<>&]/g, '')}</code> (software),
+    so the sim will be slow. Enable it in Chrome/Edge: <i>Settings → System → Use graphics acceleration when available</i>, then restart.
+    Check <code>chrome://gpu</code> shows "WebGL: Hardware accelerated". On laptops, set the browser to the high-performance GPU.
+    <button class="btn">Dismiss</button>`;
+  w.classList.remove('hidden');
+  w.querySelector('button').addEventListener('click', () => w.classList.add('hidden'));
+}
 toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · P = replay · H = help', 6000);
 requestAnimationFrame(frame);
 
 // Expose for debugging / automated smoke tests.
 window.__fpv = {
-  audio, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, renderer, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad, textureSource: map.textureSource,
+  audio, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, renderer, gpu, perf, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad, textureSource: map.textureSource,
   get quadModel() { return quadModel; },
 };

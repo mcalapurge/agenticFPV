@@ -85,6 +85,7 @@ export const DEFAULT_CONFIG = {
     mode: 'fpv', // 'fpv' | 'chase' | 'los'
     showSticks: true,
     showOsd: true,
+    showPerf: false, // FPS / frame-time / GPU readout (F)
   },
   audio: {
     enabled: true,

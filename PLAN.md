@@ -116,3 +116,7 @@ environment's network policy, so real photo textures are fetched by a script the
   reachable from the build environment).
 - Ideas: merge quad-model meshes to cut draw calls, more maps, multi-quad ghost comparison, VR/goggle output,
   FPV-view props option, gyro noise spectrum / RPM filter simulation.
+- **GPU check** WebGL GPU detection (`src/render/gpuInfo.js`): software-renderer warning banner (SwiftShader,
+  llvmpipe, Microsoft Basic Render…) with fix instructions; GPU name in the Video tab; `F` toggles an OSD
+  readout of FPS / frame time / physics ms / render-submit ms. Measured: physics ≈6–11 µs per 1 kHz step
+  (~1% of one core for the player quad; 100 quads ≈18%), so physics stays on the CPU.
