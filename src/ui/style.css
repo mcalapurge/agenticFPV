@@ -111,3 +111,21 @@ kbd { background: #2a2f38; border: 1px solid #444; border-radius: 4px; padding: 
 .card span { color: var(--dim); }
 .card:hover { border-color: var(--accent2); }
 .card.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#osd .lap.big { top: 30%; font-size: 5em; }
+#results { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.45); z-index: 15; pointer-events: none; }
+#results.hidden { display: none; }
+.results-card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 22px 28px; min-width: 360px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.results-card h2 { margin: 0; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.results-card h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; color: var(--accent2); letter-spacing: 0.08em; }
+.results-card .big { font: 700 44px ui-monospace, monospace; margin: 8px 0 12px; }
+.results-card .sub { color: var(--dim); margin: 4px 0; font-size: 13px; }
+.results-card table { width: 100%; border-collapse: collapse; font: 14px ui-monospace, monospace; }
+.results-card td, .results-card th { padding: 4px 6px; text-align: left; }
+.results-card th { color: var(--dim); font-weight: 500; }
+.results-card tr.best td { color: var(--good); }
+.tracklist { display: grid; gap: 8px; }
+.trackrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: #111318; border: 1px solid #343a45; border-radius: 8px; padding: 10px 12px; }
+.trackrow.active { border-color: var(--accent); }
+.trackrow b { font-size: 14px; }
+.trackrow small { display: block; color: var(--dim); }
+.trackrow .actions { display: flex; gap: 6px; }

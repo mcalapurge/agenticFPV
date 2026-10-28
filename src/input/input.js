@@ -54,6 +54,11 @@ export class InputManager {
   _onKey(e, down) {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
     const k = e.key.toLowerCase();
+    // Main can claim keys first (replay transport, track editor…).
+    if (down && this.keyHook?.(k, e)) {
+      e.preventDefault();
+      return;
+    }
     if (down && !e.repeat) {
       if (k === 'r') this._emit('reset');
       if (k === 'c') this._emit('camera');

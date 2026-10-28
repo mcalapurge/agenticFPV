@@ -34,11 +34,12 @@ export class OSD {
   }
 
   update(s) {
-    const { config, quad, fc, armed, flightTime, warning, lap } = s;
+    const { config, quad, fc, armed, flightTime, warning, lap, signal = 1, big = false } = s;
     this.root.style.display = config.camera.showOsd ? '' : 'none';
     const b = quad.battery;
     const cells = config.physics.cells;
-    this.set('tl', `${b.voltage.toFixed(1)}V  ${(b.voltage / cells).toFixed(2)}v\n${b.current.toFixed(0).padStart(3)}A ${b.usedMah.toFixed(0)}mAh`);
+    const link = config.video.system === 'digital' ? `LQ ${(signal * 100).toFixed(0)}%` : `RSSI ${(signal * 99).toFixed(0)}`;
+    this.set('tl', `${b.voltage.toFixed(1)}V  ${(b.voltage / cells).toFixed(2)}v\n${b.current.toFixed(0).padStart(3)}A ${b.usedMah.toFixed(0)}mAh\n${link}`);
     this.set('tr', `${fmtTime(flightTime)}\n${config.flight.mode === 'angle' ? 'ANGL' : 'ACRO'}`);
     this.set('bl', `${quad.speedKmh.toFixed(0).padStart(3)} KM/H\n${quad.pos.y.toFixed(1).padStart(5)} M`);
     this.set('br', `THR ${(fc.throttle * 100).toFixed(0).padStart(3)}%`);
@@ -46,6 +47,7 @@ export class OSD {
     const w = this.els.warn;
     w.textContent = warning || '';
     w.classList.toggle('blink', !!warning);
+    this.els.lap.classList.toggle('big', big);
     this.set('lap', lap || '');
     this.set('bc', '');
 

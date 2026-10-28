@@ -4,6 +4,9 @@ import { DEFAULT_CONFIG, deepClone, deepMerge, getPath, setPath, saveConfig } fr
 import { applyRate } from '../sim/rates.js';
 import { CHANNELS, INPUT_PRESETS, CalibrationWizard } from '../input/input.js';
 import { QUAD_PRESETS, applyPreset } from '../sim/presets.js';
+import { allTracks, getRecord, loadUserTracks, saveUserTracks } from '../game/tracks.js';
+import { TIME_OF_DAY } from '../render/environment.js';
+import { fmtTime } from './osd.js';
 
 const h = (tag, attrs = {}, ...children) => {
   const el = document.createElement(tag);
@@ -81,13 +84,28 @@ const SCHEMA = {
       { path: 'camera.showOsd', label: 'Show OSD', type: 'bool' },
       { path: 'camera.showSticks', label: 'Show stick overlay', type: 'bool' },
     ] },
+    { title: 'Video link', fields: [
+      { path: 'video.system', label: 'Video system', type: 'select', options: { analog: 'Analog (static & breakup)', digital: 'Digital HD (blocky / freeze)', clean: 'Clean (no link sim)' } },
+      { path: 'video.vtxPower', label: 'VTX power', type: 'select', num: true, options: { 25: '25 mW', 200: '200 mW', 600: '600 mW', 1000: '1 W' } },
+      { path: 'video.fisheye', label: 'Lens distortion', min: 0, max: 1, step: 0.05 },
+      { path: 'video.chroma', label: 'Chromatic aberration', min: 0, max: 2, step: 0.05 },
+      { path: 'video.vignette', label: 'Vignette', min: 0, max: 1, step: 0.05 },
+      { path: 'video.staticAmount', label: 'Static / breakup', min: 0, max: 2, step: 0.05 },
+      { path: 'video.scanlines', label: 'Scanlines (analog)', min: 0, max: 1, step: 0.05 },
+    ] },
     { title: 'Audio', fields: [
       { path: 'audio.enabled', label: 'Sound', type: 'bool' },
       { path: 'audio.volume', label: 'Master volume', min: 0, max: 1, step: 0.05 },
       { path: 'audio.motorVolume', label: 'Motors & props', min: 0, max: 2, step: 0.05 },
       { path: 'audio.windVolume', label: 'Wind rush', min: 0, max: 2, step: 0.05 },
     ] },
+    { title: 'Environment', fields: [
+      { path: 'graphics.timeOfDay', label: 'Time of day', type: 'select', options: Object.fromEntries(Object.entries(TIME_OF_DAY).map(([k, v]) => [k, v.label])) },
+      { path: 'physics.windSpeed', label: 'Wind speed', unit: 'm/s', min: 0, max: 20, step: 0.5 },
+      { path: 'physics.windGust', label: 'Gusts', min: 0, max: 1, step: 0.05 },
+    ] },
     { title: 'Graphics', fields: [
+      { path: 'graphics.ibl', label: 'HDRI lighting (IBL)', type: 'bool' },
       { path: 'graphics.shadows', label: 'Shadows', type: 'bool' },
       { path: 'graphics.fog', label: 'Fog / haze', type: 'bool' },
       { path: 'graphics.pixelRatio', label: 'Render scale', min: 0.5, max: 2, step: 0.25 },
@@ -96,7 +114,8 @@ const SCHEMA = {
 };
 
 export class SettingsMenu {
-  constructor(root, config, { input, onChange, onClose }) {
+  constructor(root, config, { input, game, onChange, onClose }) {
+    this.game = game;
     this.root = root;
     this.config = config;
     this.input = input;
@@ -135,8 +154,8 @@ export class SettingsMenu {
   render() {
     this.live = [];
     const tabs = [
-      ['quad', 'Quad'], ['controller', 'Controller'], ['rates', 'Rates'], ['pids', 'PIDs'], ['filters', 'Filters'],
-      ['physics', 'Physics'], ['camera', 'Camera, Video & Audio'], ['help', 'Help'],
+      ['race', 'Race'], ['quad', 'Quad'], ['controller', 'Controller'], ['rates', 'Rates'], ['pids', 'PIDs'], ['filters', 'Filters'],
+      ['physics', 'Physics'], ['camera', 'Video, Env & Audio'], ['help', 'Help'],
     ];
     const body = h('div', { class: 'body' });
     const panel = h('div', { class: 'panel' },
@@ -163,6 +182,7 @@ export class SettingsMenu {
       rates: () => this._ratesTab(body),
       pids: () => this._pidTab(body),
       quad: () => this._quadTab(body),
+      race: () => this._raceTab(body),
       help: () => this._helpTab(body),
     }[this.tab];
     if (fn) fn();
@@ -186,8 +206,8 @@ export class SettingsMenu {
       return h('div', { class: 'row' }, label, cb, h('span'));
     }
     if (f.type === 'select') {
-      const sel = h('select', { onchange: (e) => { setPath(this.config, f.path, e.target.value); this._changed(f.path); this.render(); } },
-        Object.entries(f.options).map(([k, l]) => { const o = h('option', { value: k }, l); if (k === v) o.selected = true; return o; }));
+      const sel = h('select', { onchange: (e) => { setPath(this.config, f.path, f.num ? +e.target.value : e.target.value); this._changed(f.path); this.render(); } },
+        Object.entries(f.options).map(([k, l]) => { const o = h('option', { value: k }, l); if (String(k) === String(v)) o.selected = true; return o; }));
       return h('div', { class: 'row' }, label, sel, h('span'));
     }
     const range = h('input', { type: 'range', min: f.min, max: f.max, step: f.step });
@@ -222,6 +242,84 @@ export class SettingsMenu {
     upd();
     this.live.push(upd);
     body.prepend(h('div', { class: 'section' }, out));
+  }
+
+  // ── Race tab ─────────────────────────────────────────────────────────────
+  _raceTab(body) {
+    const g = this.config.game;
+    const game = this.game;
+    const modes = [['free', 'Free fly', 'No gates, no timer — freestyle'], ['practice', 'Practice', 'Endless laps, PB ghost, split deltas'], ['race', 'Race', 'Countdown, N laps, results & leaderboard'], ['editor', 'Track editor', 'Fly around and drop gates with G']];
+    const modeCards = h('div', { class: 'cards' }, modes.map(([id, name, desc]) => h('button', {
+      class: `card${g.mode === id ? ' active' : ''}`,
+      onclick: () => { game.setMode(id); this._changed('game.mode'); this.render(); },
+    }, h('b', {}, name), h('span', {}, desc))));
+
+    const quadId = this.config.quad.preset;
+    const list = h('div', { class: 'tracklist' });
+    for (const t of allTracks()) {
+      const rec = getRecord(t.id, quadId);
+      const actions = h('div', { class: 'actions' },
+        h('button', { class: 'btn', onclick: () => { game.loadTrack(t.id); if (g.mode === 'free' || g.mode === 'editor') game.setMode(g.mode === 'editor' ? 'editor' : 'practice'); this._changed('game.track'); this.render(); } }, t.id === game.track.id ? 'Selected' : 'Select'),
+        h('button', { class: 'btn', onclick: () => this._download(`${t.id}.track.json`, { name: t.name, description: t.description, gates: t.gates }) }, 'Export'),
+        t.user ? h('button', { class: 'btn', onclick: () => { saveUserTracks(loadUserTracks().filter((x) => x.id !== t.id)); if (game.track.id === t.id) game.loadTrack('works'); this._changed('game.track'); this.render(); } }, 'Delete') : null);
+      list.append(h('div', { class: `trackrow${t.id === game.track.id ? ' active' : ''}` },
+        h('div', {}, h('b', {}, t.name, t.user ? ' (custom)' : ''), h('small', {}, `${t.gates.length} gates · ${t.description || ''}`), h('small', {}, rec?.bestLap != null ? `PB with this quad: ${fmtTime(rec.bestLap)}` : 'No lap set with this quad yet')),
+        actions));
+    }
+
+    const editor = h('div', { class: 'section' });
+    if (g.mode === 'editor') {
+      const name = h('input', { type: 'text', value: game.track.name });
+      editor.append(h('h3', {}, 'Track editor'),
+        h('p', { class: 'hint' }, 'Fly to where you want a gate, point the quad through it and press G (dive gates: point the nose straight down). Backspace removes the last gate. Gate 1 is start/finish.'),
+        h('div', { class: 'row' }, h('label', {}, 'Track name'), name, h('span')),
+        h('button', { class: 'btn primary', onclick: () => { game.saveTrack(name.value.trim() || 'My track'); this.render(); } }, 'Save track'), ' ',
+        h('button', { class: 'btn', onclick: () => { game.track.gates = []; game.rebuildGates(); this.render(); } }, 'Clear gates'), ' ',
+        h('span', { class: 'hint' }, `${game.track.gates.length} gates`));
+    }
+
+    const rec = getRecord(game.track.id, quadId);
+    const board = h('table', { class: 'pid' }, h('tr', {}, h('th', {}, '#'), h('th', {}, 'Laps'), h('th', {}, 'Total'), h('th', {}, 'Best lap'), h('th', {}, 'Date')),
+      (rec?.races || []).map((r, i) => h('tr', {}, h('td', {}, i + 1), h('td', {}, r.laps), h('td', {}, fmtTime(r.total)), h('td', {}, fmtTime(r.best)), h('td', {}, new Date(r.date).toLocaleString()))));
+
+    body.append(
+      h('div', { class: 'section' }, h('h3', {}, 'Mode'), modeCards),
+      h('div', { class: 'section' }, h('h3', {}, 'Options'), h('div', { class: 'grid2' },
+        this._field({ path: 'game.laps', label: 'Race laps', min: 1, max: 10, step: 1 }),
+        this._field({ path: 'game.ghost', label: 'Show PB ghost', type: 'bool' }),
+        this._field({ path: 'game.gatesInFree', label: 'Gates in free fly', type: 'bool' }))),
+      editor,
+      h('div', { class: 'section' }, h('h3', {}, 'Tracks'), list,
+        h('p', {}, h('button', { class: 'btn', onclick: () => this._importTrack() }, 'Import track JSON'))),
+      h('div', { class: 'section' }, h('h3', {}, `Leaderboard · ${game.track.name} · ${QUAD_PRESETS[quadId]?.name ?? ''}`),
+        rec?.races?.length ? board : h('p', { class: 'hint' }, 'No races yet. Switch to Race mode and set a time!')),
+    );
+  }
+
+  _download(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = h('a', { href: URL.createObjectURL(blob), download: filename });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  _importTrack() {
+    const inp = h('input', { type: 'file', accept: 'application/json' });
+    inp.addEventListener('change', async () => {
+      try {
+        const t = JSON.parse(await inp.files[0].text());
+        if (!Array.isArray(t.gates)) throw new Error('no gates array');
+        const id = `user-${Date.now().toString(36)}`;
+        saveUserTracks([...loadUserTracks(), { id, name: t.name || 'Imported track', description: t.description || '', gates: t.gates }]);
+        this.game.loadTrack(id);
+        this._changed('game.track');
+        this.render();
+        this.onToast?.('Track imported ✔');
+      } catch (err) {
+        this.onToast?.(`Import failed: ${err.message}`);
+      }
+    });
+    inp.click();
   }
 
   // ── Quad tab ─────────────────────────────────────────────────────────────
@@ -516,7 +614,7 @@ export class SettingsMenu {
   }
 
   _resetTab() {
-    const map = { quad: [], controller: ['input'], rates: ['rates', 'flight.motorIdle'], pids: ['pid', 'flight.mode'], filters: ['filters'], physics: ['physics'], camera: ['camera', 'graphics'] };
+    const map = { race: ['game'], quad: [], controller: ['input'], rates: ['rates', 'flight.motorIdle'], pids: ['pid', 'flight.mode'], filters: ['filters'], physics: ['physics'], camera: ['camera', 'graphics'] };
     for (const p of map[this.tab] || []) setPath(this.config, p, deepClone(getPath(DEFAULT_CONFIG, p)));
     this._changed('all');
     this.render();

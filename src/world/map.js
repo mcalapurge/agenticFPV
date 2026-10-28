@@ -205,8 +205,6 @@ export function buildMap(scene, collision) {
     contRed: new THREE.MeshStandardMaterial({ map: metalTexture('#7a2a22'), roughness: 0.7, metalness: 0.3 }),
     contGreen: new THREE.MeshStandardMaterial({ map: metalTexture('#3d5a35'), roughness: 0.7, metalness: 0.3 }),
     wood: new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.95 }),
-    gateA: new THREE.MeshStandardMaterial({ color: '#ff6a00', emissive: '#ff4400', emissiveIntensity: 0.6, roughness: 0.5 }),
-    gateB: new THREE.MeshStandardMaterial({ color: '#00d5ff', emissive: '#0099ff', emissiveIntensity: 0.6, roughness: 0.5 }),
   };
   const b = new Builder(materials, collision);
 
@@ -421,40 +419,11 @@ export function buildMap(scene, collision) {
       scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat));
     }
 
-  // ── Race gates ───────────────────────────────────────────────────────────
-  const gates = [];
-  const gateDefs = [
-    [0, 1.8, 38, 0, 0, -1],
-    [10, 3, -25, 0, 1, 0], // into warehouse west door
-    [40, 3.5, -25, 0, 1, 0], // inside warehouse
-    [75, 12, -48, 0, 0, -1], // past the pipe bridge to the stack
-    [30, 8, -78, 0, -1, 0], // swing west
-    [-5, 34, -66, 0, 0, 1], // dive off the tower roof edge
-    [-40, 5.2, -20, 0, 0, 1], // through skeleton floor 2
-    [-44, 3.6, 34, 0, 0, 1], // container yard
-    [-15, 2, 52, 0, 1, 0], // home straight
-  ];
-  gateDefs.forEach(([x, y, z, , dx, dz], i) => {
-    const dir = new THREE.Vector3(dx, 0, dz).normalize();
-    const ry = Math.atan2(dir.x, dir.z);
-    const inner = 2.2, bar = 0.18, mat = i % 2 ? 'gateB' : 'gateA';
-    const right = new THREE.Vector3(Math.cos(ry), 0, -Math.sin(ry));
-    const half = inner / 2 + bar / 2;
-    // top / bottom
-    b.box(x, y + inner / 2, z, inner + bar * 2, bar, bar, mat, { rot: [0, ry, 0] });
-    b.box(x, y - inner / 2 - bar, z, inner + bar * 2, bar, bar, mat, { rot: [0, ry, 0] });
-    // sides
-    for (const s of [-1, 1]) b.box(x + right.x * half * s, y - inner / 2 - bar, z + right.z * half * s, bar, inner + bar * 2, bar, mat, { rot: [0, ry, 0] });
-    // leg down to the ground (if low enough to look natural)
-    if (y < 6) for (const s of [-1, 1]) b.box(x + right.x * half * s, 0, z + right.z * half * s, 0.08, Math.max(0, y - inner / 2 - bar), 0.08, 'rust', { collide: false });
-    gates.push({ pos: new THREE.Vector3(x, y, z), dir, right, size: inner });
-  });
-
   b.finish(scene);
   placeGraffiti(scene);
 
   return {
     spawn: { pos: new THREE.Vector3(0, 0.2, 60), yaw: 0 },
-    gates,
+    materials,
   };
 }

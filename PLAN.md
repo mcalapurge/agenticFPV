@@ -36,7 +36,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 - [x] **M9 Quad classes + detailed models** — presets (5" race, 5" freestyle, 3" toothpick, cinewhoop,
   7" long range, 65mm tiny whoop) with high-poly procedural models (twisted 3-blade props, motor bells, ducts…)
 - [x] **M10 Motor audio** — WebAudio synth: per-motor whine + blade-pass tones, prop wash, impacts, volume
-- [ ] **M11 Game modes** — tracks (3 built-in + custom), track editor, race mode (countdown, laps, missed gates,
+- [x] **M11 Game modes** — tracks (3 built-in + custom), track editor, race mode (countdown, laps, missed gates,
   results), time-trial ghost of best lap, local leaderboards, DVR replay
 - [ ] **M12 Video & environment** — post-FX (fisheye, analog static/breakup by range & walls, digital HD look),
   time-of-day presets, CC0 HDRI image-based lighting (@pmndrs/assets → Poly Haven)
@@ -85,3 +85,9 @@ environment's network policy, so real photo textures are fetched by a script the
 - **M10** WebAudio synth driven by simulated rpm: per-motor sawtooth whine at electrical freq (7 pole pairs)
   + blade-pass tones, band-passed prop noise, LFO prop-wash flutter, airspeed wind rush, impact crack/thump,
   distance attenuation + low-pass in third-person views. Volume controls in Camera/Video/Audio tab.
+- **M11** Game modes: Free fly / Practice / Race / Track editor. 3 built-in tracks (Works Circuit, Warehouse
+  Sprint, Tower Dive incl. tilted + dive gates), all verified clear of colliders. Padded striped gates with
+  number boards + colliders; next/next-next highlights + off-screen pointer; holeshot, laps, split deltas vs PB,
+  missed-gate warnings, results card, local leaderboard (top 10 per track × quad), PB ghost replay,
+  90 s DVR replay (P: seek/speed/pause/camera). Editor: G place (dive if nose down), Backspace undo,
+  save/import/export JSON. Smoke-tested: race of 2 laps → results + PB; replay.

@@ -92,7 +92,25 @@ export const DEFAULT_CONFIG = {
     motorVolume: 1.0,
     windVolume: 0.6,
   },
+  game: {
+    mode: 'practice', // 'free' | 'practice' | 'race' | 'editor'
+    track: 'works',
+    laps: 3,
+    ghost: true,
+    gatesInFree: false,
+  },
+  video: {
+    system: 'analog', // 'analog' | 'digital' | 'clean'
+    vtxPower: 200, // mW → range
+    fisheye: 0.35,
+    chroma: 0.5,
+    vignette: 0.55,
+    staticAmount: 1.0,
+    scanlines: 0.6,
+  },
   graphics: {
+    timeOfDay: 'golden',
+    ibl: true,
     shadows: true,
     pixelRatio: 1,
     fog: true,

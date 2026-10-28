@@ -172,7 +172,7 @@ export class MotorAudio {
       const fe = (rpm / 60) * POLE_PAIRS;
       const fb = (rpm / 60) * blades;
       v.whine.frequency.setTargetAtTime(fe, t, tc);
-      v.whineBp.frequency.setTargetAtTime(fe * 1.5, t, tc);
+      v.whineBp.frequency.setTargetAtTime(Math.min(fe * 1.5, ctx.sampleRate * 0.45), t, tc);
       v.blade.frequency.setTargetAtTime(fb, t, tc);
       v.blade2.frequency.setTargetAtTime(fb * 2, t, tc);
       const level = s < 0.01 ? 0 : Math.pow(s, 1.3);
@@ -180,7 +180,7 @@ export class MotorAudio {
       v.bladeGain.gain.setTargetAtTime(level * 0.09 * a.motorVolume, t, tc);
     });
     const bladeFreq = ((Math.max(0.05, avg) * maxRpm) / 60) * blades;
-    this.propBp.frequency.setTargetAtTime(bladeFreq * 1.2, t, tc);
+    this.propBp.frequency.setTargetAtTime(Math.min(bladeFreq * 1.2, ctx.sampleRate * 0.45), t, tc);
     this.propNoiseGain.gain.setTargetAtTime(Math.pow(avg, 1.6) * 0.5 * a.motorVolume, t, tc);
     this.washGain.gain.setTargetAtTime(quad.propwashLevel * 0.6 * a.motorVolume, t, 0.05);
     const speed = quad.vel.length();
