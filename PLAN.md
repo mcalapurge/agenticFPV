@@ -26,8 +26,8 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 - [x] **M3 Input** — gamepad/RC mapping, calibration, arming, keyboard fallback
 - [x] **M4 Map** — abandoned buildings, textures, colliders, collision response
 - [x] **M5 UI** — settings panel (Controller / Rates / PIDs / Filters / Physics / Camera / Graphics), persistence, OSD
-- [~] **M6 Polish** — cameras, gates + lap timer, prop-wash, battery, GH Pages deploy workflow, README
-- [ ] **M7 Verify** — headless browser smoke test + screenshot, physics tests green
+- [x] **M6 Polish** — cameras, gates + lap timer, prop-wash, battery, GH Pages deploy workflow, README
+- [x] **M7 Verify** — headless browser smoke test + screenshot, physics tests green
 
 ## Progress log
 
@@ -43,3 +43,16 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 - **M5** Settings menu (Controller / Rates w/ live curve / PIDs w/ simplified sliders / Filters / Physics w/
   derived T:W / Camera & Video / Help), auto-saved to localStorage, JSON import/export. BF-style OSD, stick
   overlay, blackbox trace (B).
+- **M6** Race gates (9) with lap timer and next-gate highlight, FPV/chase/LOS cameras, prop-wash, battery sag,
+  GitHub Pages workflow, README.
+- **M7** Playwright smoke tests in headless Chromium: page loads with no errors; keyboard arm and take-off
+  work; all 9 gate paths are clear of colliders; a lap is timed correctly; menu tabs render.
+  `npm test` passes 8/8.
+
+## Ideas / next steps
+
+- Mouse-free "quick tune" presets (e.g. 3", 5" race, 7" long range, cinewhoop).
+- Turtle mode (flip over after a crash without resetting).
+- Simulated analog video noise and breakup at range or behind walls.
+- More maps, a gate editor, and ghost replays.
+- Tests that pin the arming state machine and the lap-gate crossing logic.

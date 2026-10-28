@@ -365,4 +365,4 @@ toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · H 
 requestAnimationFrame(frame);
 
 // Expose for debugging / automated smoke tests.
-window.__fpv = { config, quad, fc, state, input, menu, collision, scene, camera };
+window.__fpv = { config, quad, fc, state, input, menu, collision, scene, camera, gates };
