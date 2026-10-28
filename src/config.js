@@ -86,6 +86,12 @@ export const DEFAULT_CONFIG = {
     showSticks: true,
     showOsd: true,
   },
+  audio: {
+    enabled: true,
+    volume: 0.6,
+    motorVolume: 1.0,
+    windVolume: 0.6,
+  },
   graphics: {
     shadows: true,
     pixelRatio: 1,

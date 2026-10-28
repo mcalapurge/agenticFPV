@@ -9,6 +9,7 @@ import { SettingsMenu } from './ui/settings.js';
 import { OSD, fmtTime } from './ui/osd.js';
 import { buildQuadModel } from './world/quadModel.js';
 import { QUAD_PRESETS } from './sim/presets.js';
+import { MotorAudio } from './audio/motorAudio.js';
 
 const DT = 1 / 1000; // physics + PID loop: 1 kHz
 const MAX_STEPS_PER_FRAME = 120;
@@ -94,6 +95,7 @@ quad.noiseScale = config.filters.gyroNoise;
 const input = new InputManager(config);
 const osd = new OSD(document.getElementById('osd'), document.getElementById('sticks'), document.getElementById('blackbox'));
 
+const audio = new MotorAudio(config);
 const camera = new THREE.PerspectiveCamera(90, 1, 0.03, 2000);
 const chasePos = new THREE.Vector3();
 
@@ -320,6 +322,7 @@ function frame(now) {
       state.armed = false;
       fc.armed = false;
     }
+    if (quad.lastImpact > 0.8) audio.impact(quad.lastImpact);
     quad.lastImpact = 0;
     updateGates();
     prevPos.copy(quad.pos);
@@ -334,6 +337,8 @@ function frame(now) {
   sun.target.position.copy(quad.pos);
   sky.position.copy(camera.position);
   updateCamera(frameDt);
+  const preset = QUAD_PRESETS[config.quad.preset] || QUAD_PRESETS.freestyle5;
+  audio.update(quad, config.camera.mode === 'fpv' ? 0 : camera.position.distanceTo(quad.pos), menu.isOpen, preset.model.blades);
 
   osd.update({ config, quad, fc, armed: state.armed, flightTime: state.flightTime, warning: state.warning, lap: lapText(), rc });
   renderer.render(scene, camera);
@@ -344,4 +349,4 @@ toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · H 
 requestAnimationFrame(frame);
 
 // Expose for debugging / automated smoke tests.
-window.__fpv = { config, quad, fc, state, input, menu, collision, scene, camera, gates, rebuildQuadModel, applyConfig, get quadModel() { return quadModel; } };
+window.__fpv = { audio, config, quad, fc, state, input, menu, collision, scene, camera, gates, rebuildQuadModel, applyConfig, get quadModel() { return quadModel; } };

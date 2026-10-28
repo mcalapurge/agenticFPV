@@ -81,6 +81,12 @@ const SCHEMA = {
       { path: 'camera.showOsd', label: 'Show OSD', type: 'bool' },
       { path: 'camera.showSticks', label: 'Show stick overlay', type: 'bool' },
     ] },
+    { title: 'Audio', fields: [
+      { path: 'audio.enabled', label: 'Sound', type: 'bool' },
+      { path: 'audio.volume', label: 'Master volume', min: 0, max: 1, step: 0.05 },
+      { path: 'audio.motorVolume', label: 'Motors & props', min: 0, max: 2, step: 0.05 },
+      { path: 'audio.windVolume', label: 'Wind rush', min: 0, max: 2, step: 0.05 },
+    ] },
     { title: 'Graphics', fields: [
       { path: 'graphics.shadows', label: 'Shadows', type: 'bool' },
       { path: 'graphics.fog', label: 'Fog / haze', type: 'bool' },
@@ -130,7 +136,7 @@ export class SettingsMenu {
     this.live = [];
     const tabs = [
       ['quad', 'Quad'], ['controller', 'Controller'], ['rates', 'Rates'], ['pids', 'PIDs'], ['filters', 'Filters'],
-      ['physics', 'Physics'], ['camera', 'Camera & Video'], ['help', 'Help'],
+      ['physics', 'Physics'], ['camera', 'Camera, Video & Audio'], ['help', 'Help'],
     ];
     const body = h('div', { class: 'body' });
     const panel = h('div', { class: 'panel' },
