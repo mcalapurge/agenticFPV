@@ -7,6 +7,8 @@ import { buildMap } from './world/map.js';
 import { InputManager } from './input/input.js';
 import { SettingsMenu } from './ui/settings.js';
 import { OSD, fmtTime } from './ui/osd.js';
+import { buildQuadModel } from './world/quadModel.js';
+import { QUAD_PRESETS } from './sim/presets.js';
 
 const DT = 1 / 1000; // physics + PID loop: 1 kHz
 const MAX_STEPS_PER_FRAME = 120;
@@ -62,49 +64,14 @@ const collision = new CollisionWorld();
 const { spawn, gates } = buildMap(scene, collision);
 
 // ── Quad model ───────────────────────────────────────────────────────────
-function buildQuadModel() {
-  const g = new THREE.Group();
-  const carbon = new THREE.MeshStandardMaterial({ color: '#1b1c1f', roughness: 0.5, metalness: 0.2 });
-  const accent = new THREE.MeshStandardMaterial({ color: '#ff6a00', roughness: 0.5 });
-  const metal = new THREE.MeshStandardMaterial({ color: '#888', metalness: 0.8, roughness: 0.3 });
-  const arm = 0.112;
-  for (const a of [Math.PI / 4, -Math.PI / 4]) {
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(arm * 2 + 0.03, 0.006, 0.022), carbon);
-    bar.rotation.y = a;
-    g.add(bar);
-  }
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.03, 0.11), carbon);
-  plate.position.y = 0.018;
-  g.add(plate);
-  const batt = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 0.075), accent);
-  batt.position.y = 0.05;
-  g.add(batt);
-  const cam = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.022, 0.02), metal);
-  cam.position.set(0, 0.02, -0.06);
-  g.add(cam);
-  const props = [];
-  const propMat = new THREE.MeshBasicMaterial({ color: '#ff8a3c', transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false });
-  const bladeMat = new THREE.MeshStandardMaterial({ color: '#ff8a3c', roughness: 0.6 });
-  for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-    const p = new THREE.Vector3(x, 0, z).multiplyScalar(arm / Math.SQRT2);
-    const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.018, 12), metal);
-    motor.position.copy(p).setY(0.01);
-    g.add(motor);
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.0635, 24), propMat);
-    disc.rotation.x = -Math.PI / 2;
-    disc.position.copy(p).setY(0.022);
-    g.add(disc);
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.127, 0.002, 0.012), bladeMat);
-    blade.position.copy(p).setY(0.022);
-    g.add(blade);
-    props.push({ disc, blade });
-  }
-  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-  g.userData.props = props;
-  return g;
+let quadModel = null;
+function rebuildQuadModel() {
+  if (quadModel) scene.remove(quadModel);
+  const preset = QUAD_PRESETS[config.quad.preset] || QUAD_PRESETS.freestyle5;
+  quadModel = buildQuadModel(preset, config.physics, { cameraTilt: config.camera.tilt });
+  scene.add(quadModel);
 }
-const quadModel = buildQuadModel();
-scene.add(quadModel);
+rebuildQuadModel();
 
 // Next-gate highlight frame.
 const gateHi = new THREE.Group();
@@ -184,6 +151,8 @@ const menu = new SettingsMenu(document.getElementById('menu'), config, {
     applyConfig();
     // Material changes need a shader recompile for shadows.
     if (path === 'graphics.shadows') scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; });
+    if (path === 'quad.preset' || path === 'all' || path.startsWith('physics.armLength') || path.startsWith('physics.prop') || path === 'camera.tilt') rebuildQuadModel();
+    if (path === 'quad.preset') resetQuad();
   },
   onClose: () => { lastTime = performance.now(); },
 });
@@ -192,7 +161,7 @@ menu.onToast = toast;
 input.on('menu', () => menu.toggle());
 input.on('reset', () => { resetQuad(); });
 input.on('camera', () => {
-  const modes = ['fpv', 'chase', 'los'];
+  const modes = ['fpv', 'chase', 'los', 'orbit'];
   config.camera.mode = modes[(modes.indexOf(config.camera.mode) + 1) % modes.length];
   toast(`Camera: ${config.camera.mode.toUpperCase()}`, 1200);
 });
@@ -294,7 +263,8 @@ function updateCamera(frameDt) {
     camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / aspect));
     tiltQ.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(config.camera.tilt));
     camera.quaternion.copy(quad.quat).multiply(tiltQ);
-    camera.position.copy(quad.pos).add(tmpV.set(0, 0.03, -0.06).applyQuaternion(quad.quat));
+    const size = config.physics.armLengthMm / 112;
+    camera.position.copy(quad.pos).add(tmpV.set(0, 0.03 * size, -0.06 * size).applyQuaternion(quad.quat));
     quadModel.visible = false;
   } else if (mode === 'chase') {
     camera.fov = 75;
@@ -302,9 +272,17 @@ function updateCamera(frameDt) {
     fwd.y = 0;
     if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
     fwd.normalize();
-    const desired = quad.pos.clone().addScaledVector(fwd, -2.4).add(new THREE.Vector3(0, 0.9, 0));
+    const size = Math.max(0.3, config.physics.armLengthMm / 112);
+    const desired = quad.pos.clone().addScaledVector(fwd, -2.4 * size).add(new THREE.Vector3(0, 0.9 * size, 0));
     chasePos.lerp(desired, 1 - Math.exp(-frameDt * 8));
     camera.position.copy(chasePos);
+    camera.lookAt(quad.pos);
+    quadModel.visible = true;
+  } else if (mode === 'orbit') {
+    const size = Math.max(0.25, config.physics.armLengthMm / 112);
+    const t = performance.now() / 4000;
+    camera.fov = 45;
+    camera.position.set(quad.pos.x + Math.cos(t) * 0.5 * size, quad.pos.y + 0.2 * size, quad.pos.z + Math.sin(t) * 0.5 * size);
     camera.lookAt(quad.pos);
     quadModel.visible = true;
   } else {
@@ -351,12 +329,7 @@ function frame(now) {
   // Visuals.
   quadModel.position.copy(quad.pos);
   quadModel.quaternion.copy(quad.quat);
-  quadModel.userData.props.forEach((p, i) => {
-    const s = quad.motorSpeed[i];
-    p.blade.visible = s < 0.08;
-    p.disc.visible = s >= 0.08;
-    p.blade.rotation.y += s * 2;
-  });
+  quadModel.userData.update(quad.motorSpeed, frameDt);
   sun.position.copy(quad.pos).addScaledVector(sunDir, 150);
   sun.target.position.copy(quad.pos);
   sky.position.copy(camera.position);
@@ -371,4 +344,4 @@ toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · H 
 requestAnimationFrame(frame);
 
 // Expose for debugging / automated smoke tests.
-window.__fpv = { config, quad, fc, state, input, menu, collision, scene, camera, gates };
+window.__fpv = { config, quad, fc, state, input, menu, collision, scene, camera, gates, rebuildQuadModel, applyConfig, get quadModel() { return quadModel; } };

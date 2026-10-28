@@ -3,6 +3,7 @@
 import { DEFAULT_CONFIG, deepClone, deepMerge, getPath, setPath, saveConfig } from '../config.js';
 import { applyRate } from '../sim/rates.js';
 import { CHANNELS, INPUT_PRESETS, CalibrationWizard } from '../input/input.js';
+import { QUAD_PRESETS, applyPreset } from '../sim/presets.js';
 
 const h = (tag, attrs = {}, ...children) => {
   const el = document.createElement(tag);
@@ -74,7 +75,7 @@ const SCHEMA = {
   ],
   camera: [
     { title: 'Camera', fields: [
-      { path: 'camera.mode', label: 'View', type: 'select', options: { fpv: 'FPV', chase: 'Chase', los: 'Line of sight' } },
+      { path: 'camera.mode', label: 'View', type: 'select', options: { fpv: 'FPV', chase: 'Chase', los: 'Line of sight', orbit: 'Orbit' } },
       { path: 'camera.fov', label: 'FOV (horizontal)', unit: '°', min: 60, max: 160, step: 1 },
       { path: 'camera.tilt', label: 'Camera uptilt', unit: '°', min: -10, max: 70, step: 1 },
       { path: 'camera.showOsd', label: 'Show OSD', type: 'bool' },
@@ -128,7 +129,7 @@ export class SettingsMenu {
   render() {
     this.live = [];
     const tabs = [
-      ['controller', 'Controller'], ['rates', 'Rates'], ['pids', 'PIDs'], ['filters', 'Filters'],
+      ['quad', 'Quad'], ['controller', 'Controller'], ['rates', 'Rates'], ['pids', 'PIDs'], ['filters', 'Filters'],
       ['physics', 'Physics'], ['camera', 'Camera & Video'], ['help', 'Help'],
     ];
     const body = h('div', { class: 'body' });
@@ -155,6 +156,7 @@ export class SettingsMenu {
       controller: () => this._controllerTab(body),
       rates: () => this._ratesTab(body),
       pids: () => this._pidTab(body),
+      quad: () => this._quadTab(body),
       help: () => this._helpTab(body),
     }[this.tab];
     if (fn) fn();
@@ -214,6 +216,32 @@ export class SettingsMenu {
     upd();
     this.live.push(upd);
     body.prepend(h('div', { class: 'section' }, out));
+  }
+
+  // ── Quad tab ─────────────────────────────────────────────────────────────
+  _quadTab(body) {
+    const cur = this.config.quad.preset;
+    const grid = h('div', { class: 'cards' });
+    for (const [id, p] of Object.entries(QUAD_PRESETS)) {
+      const ph = p.physics;
+      const tw = ((ph.motorThrustG * 4) / ph.massG).toFixed(1);
+      grid.append(h('button', {
+        class: `card${id === cur ? ' active' : ''}`,
+        onclick: () => {
+          applyPreset(this.config, id);
+          this._changed('quad.preset');
+          this.render();
+          this.onToast?.(`${p.name} selected`);
+        },
+      },
+      h('b', {}, p.name),
+      h('span', {}, `${ph.massG} g · ${ph.propInches}" ${p.model.blades}-blade · ${ph.cells}S`),
+      h('span', {}, `T:W ${tw}:1 · ${ph.armLengthMm * 2} mm wheelbase`)));
+    }
+    body.append(
+      h('div', { class: 'section' }, h('h3', {}, 'Quad class'), grid,
+        h('p', { class: 'hint' }, 'Selecting a class loads its airframe physics and a matching PID tune (your rates are kept). Fine-tune anything afterwards in the Physics / PIDs tabs.')),
+    );
   }
 
   // ── Controller tab ───────────────────────────────────────────────────────
@@ -482,7 +510,7 @@ export class SettingsMenu {
   }
 
   _resetTab() {
-    const map = { controller: ['input'], rates: ['rates', 'flight.motorIdle'], pids: ['pid', 'flight.mode'], filters: ['filters'], physics: ['physics'], camera: ['camera', 'graphics'] };
+    const map = { quad: [], controller: ['input'], rates: ['rates', 'flight.motorIdle'], pids: ['pid', 'flight.mode'], filters: ['filters'], physics: ['physics'], camera: ['camera', 'graphics'] };
     for (const p of map[this.tab] || []) setPath(this.config, p, deepClone(getPath(DEFAULT_CONFIG, p)));
     this._changed('all');
     this.render();

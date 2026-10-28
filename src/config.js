@@ -4,6 +4,7 @@
 const STORAGE_KEY = 'agenticfpv.config.v1';
 
 export const DEFAULT_CONFIG = {
+  quad: { preset: 'freestyle5' },
   // Betaflight-style PID profile. Units/scaling match Betaflight (P/I/D/FF numbers are interchangeable).
   pid: {
     roll: { p: 45, i: 80, d: 40, f: 120 },

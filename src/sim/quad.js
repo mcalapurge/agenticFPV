@@ -166,7 +166,8 @@ export class Quad {
     const pwTarget = descend > 1.5 ? Math.min(1, (descend - 1.5) / 6) * Math.min(1, thrustRatio * 4) : 0;
     this.propwashLevel += (pwTarget - this.propwashLevel) * Math.min(1, dt * 20);
     if (this.propwashLevel > 0.01 && p.propwash > 0) {
-      const amp = this.propwashLevel * p.propwash * 0.06;
+      // Scaled by the airframe's roll authority so small quads get proportionate buffeting.
+      const amp = this.propwashLevel * p.propwash * 0.053 * this.maxThrust * this.arm;
       for (let k = 0; k < 3; k++) this._pw[k] += ((Math.random() * 2 - 1) - this._pw[k]) * Math.min(1, dt * 90);
       torque.x += this._pw[0] * amp;
       torque.y += this._pw[1] * amp * 0.3;

@@ -33,7 +33,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 
 - [x] **M8 Contact physics + turtle + wind** — multi-point rigid-body contacts (quad tips/rests realistically),
   reversible motors, Betaflight turtle mode (switch / `T`), wind + gusts
-- [ ] **M9 Quad classes + detailed models** — presets (5" race, 5" freestyle, 3" toothpick, cinewhoop,
+- [x] **M9 Quad classes + detailed models** — presets (5" race, 5" freestyle, 3" toothpick, cinewhoop,
   7" long range, 65mm tiny whoop) with high-poly procedural models (twisted 3-blade props, motor bells, ducts…)
 - [ ] **M10 Motor audio** — WebAudio synth: per-motor whine + blade-pass tones, prop wash, impacts, volume
 - [ ] **M11 Game modes** — tracks (3 built-in + custom), track editor, race mode (countdown, laps, missed gates,
@@ -77,3 +77,8 @@ environment's network policy, so real photo textures are fetched by a script the
 - **M8** Quad collides as 6 spheres (4 props + body + battery) with rigid-body impulses + Coulomb friction —
   tumbles and settles flat. Reversible motors + BF turtle mode (latched at arm; switch or `T`). Wind with
   Ornstein–Uhlenbeck gusts. Tests: rest after drop, turtle flip upright, wind drift (11/11 pass).
+- **M9** 6 quad classes (5" freestyle/race, 3" toothpick, 3" cinewhoop, 7" LR, 65mm whoop), each with a
+  PID tune verified by `test/presets.test.js` (hover 24–54%, step overshoot ≤23%, no oscillation).
+  High-poly procedural models: extruded carbon arms w/ slots + screw holes, lathe motor bells, twisted
+  airfoil blades (2/3/4/5-blade), rpm-driven blur discs, ducts, FC stack, camera w/ lens, strapped
+  labelled LiPo + XT60 lead, antenna, GPS. New Quad tab + orbit camera.
