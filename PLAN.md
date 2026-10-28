@@ -21,13 +21,25 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 
 ## Milestones
 
-- [ ] **M1 Scaffold** — Vite project, plan, rendering a scene
-- [ ] **M2 Physics core** — quad dynamics, motors, aero, BF rates, PID + mixer, headless tests (hover, step response)
-- [ ] **M3 Input** — gamepad/RC mapping, calibration, arming, keyboard fallback
-- [ ] **M4 Map** — abandoned buildings, textures, colliders, collision response
-- [ ] **M5 UI** — settings panel (Controller / Rates / PIDs / Filters / Physics / Camera / Graphics), persistence, OSD
-- [ ] **M6 Polish** — cameras, gates + lap timer, prop-wash, battery, GH Pages deploy workflow, README
+- [x] **M1 Scaffold** — Vite project, plan, rendering a scene
+- [x] **M2 Physics core** — quad dynamics, motors, aero, BF rates, PID + mixer, headless tests (hover, step response)
+- [x] **M3 Input** — gamepad/RC mapping, calibration, arming, keyboard fallback
+- [x] **M4 Map** — abandoned buildings, textures, colliders, collision response
+- [x] **M5 UI** — settings panel (Controller / Rates / PIDs / Filters / Physics / Camera / Graphics), persistence, OSD
+- [~] **M6 Polish** — cameras, gates + lap timer, prop-wash, battery, GH Pages deploy workflow, README
 - [ ] **M7 Verify** — headless browser smoke test + screenshot, physics tests green
 
 ## Progress log
 
+- **M1–M2** Vite + Three.js scaffold; 1 kHz physics/PID loop. Headless tests: hover ≈30% throttle,
+  roll/pitch step overshoot ≈10%, yaw ≈18%, top speed ≈130 km/h, flips recover cleanly. Added BF I-term relax,
+  rotor-inertia yaw torque, airmode activation threshold.
+- **M3** Gamepad API mapping, 11-step calibration wizard (auto-detects axes, direction, ranges, arm switch),
+  presets (EdgeTX/OpenTX joystick, Xbox/PS gamepad), BF-style arming (throttle low), keyboard fallback.
+- **M4** "Abandoned Works" map: 5-floor concrete skeleton, brick warehouse with collapsed roof, 9-floor
+  blown-out tower + water tank, L-shaped ruin with collapsed corner, container yard, smokestack + boiler
+  house, pipe bridge, broken perimeter walls, rubble, power lines, raycast-placed graffiti. ~1400 OBB colliders
+  in a spatial hash.
+- **M5** Settings menu (Controller / Rates w/ live curve / PIDs w/ simplified sliders / Filters / Physics w/
+  derived T:W / Camera & Video / Help), auto-saved to localStorage, JSON import/export. BF-style OSD, stick
+  overlay, blackbox trace (B).

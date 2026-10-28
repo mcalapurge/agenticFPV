@@ -1,0 +1,107 @@
+:root {
+  --bg: rgba(14, 16, 20, 0.92);
+  --panel: #1a1d23;
+  --line: #2c313a;
+  --text: #e6e8eb;
+  --dim: #8b929c;
+  --accent: #ff7a1a;
+  --accent2: #22c8ff;
+  --good: #46d37b;
+  --bad: #ff4d4d;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #000; color: var(--text); overflow: hidden; }
+#app { position: fixed; inset: 0; }
+#view { width: 100%; height: 100%; display: block; }
+
+#loading {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: #0b0c0f; font-size: 18px; letter-spacing: 0.05em; color: var(--dim); z-index: 50;
+}
+#loading.done { display: none; }
+
+/* ── OSD (Betaflight look) ─────────────────────────── */
+#osd {
+  position: absolute; inset: 0; pointer-events: none;
+  font-family: 'Courier New', ui-monospace, monospace; font-weight: 700; font-size: clamp(13px, 1.7vw, 22px);
+  color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000;
+}
+#osd .el { position: absolute; white-space: pre; }
+#osd .tl { top: 4%; left: 4%; }
+#osd .tr { top: 4%; right: 4%; text-align: right; }
+#osd .bl { bottom: 5%; left: 4%; }
+#osd .br { bottom: 5%; right: 4%; text-align: right; }
+#osd .tc { top: 4%; left: 50%; transform: translateX(-50%); text-align: center; }
+#osd .center { top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+#osd .warn { top: 34%; left: 50%; transform: translateX(-50%); text-align: center; color: #fff; }
+#osd .warn.blink { animation: blink 0.6s steps(2) infinite; }
+#osd .bc { bottom: 5%; left: 50%; transform: translateX(-50%); text-align: center; }
+#osd .lap { top: 12%; left: 50%; transform: translateX(-50%); text-align: center; font-size: 0.9em; }
+@keyframes blink { 50% { opacity: 0; } }
+
+#sticks { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); pointer-events: none; opacity: 0.85; }
+#blackbox { position: absolute; top: 60px; right: 12px; pointer-events: none; background: rgba(0,0,0,0.55); border-radius: 6px; display: none; }
+#blackbox.show { display: block; }
+
+#toast {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  background: var(--bg); border: 1px solid var(--line); padding: 8px 14px; border-radius: 8px;
+  font-size: 14px; opacity: 0; transition: opacity 0.25s; pointer-events: none; max-width: 90vw;
+}
+#toast.show { opacity: 1; }
+
+/* ── Settings menu ─────────────────────────────────── */
+#menu {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 20;
+  backdrop-filter: blur(3px);
+}
+#menu.hidden { display: none; }
+.panel {
+  width: min(1100px, 96vw); height: min(760px, 94vh); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.panel header { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.panel header h1 { font-size: 18px; margin: 0; letter-spacing: 0.04em; }
+.panel header h1 span { color: var(--accent); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tabs button { background: transparent; color: var(--dim); border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.tabs button.active { background: #262a32; color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.tabs button:hover { color: var(--text); }
+.body { overflow: auto; padding: 16px 20px; }
+.panel footer { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
+.panel footer .spacer { flex: 1; }
+.hint { color: var(--dim); font-size: 12px; }
+
+button.btn { background: #2a2f38; color: var(--text); border: 1px solid #3a404b; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+button.btn:hover { border-color: var(--accent); }
+button.btn.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+
+.section { margin-bottom: 22px; }
+.section h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent2); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 6px 28px; }
+.row { display: grid; grid-template-columns: 170px 1fr 84px; gap: 10px; align-items: center; min-height: 32px; }
+.row label { font-size: 13px; color: var(--text); }
+.row label small { display: block; color: var(--dim); font-size: 11px; }
+.row input[type=range] { width: 100%; accent-color: var(--accent); }
+.row input[type=number], select, .row input[type=text] {
+  width: 100%; background: #111318; color: var(--text); border: 1px solid #343a45; border-radius: 5px; padding: 5px 6px; font-size: 13px;
+}
+.row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+
+table.pid { border-collapse: collapse; }
+table.pid th, table.pid td { padding: 6px 8px; text-align: center; }
+table.pid th { color: var(--dim); font-weight: 500; font-size: 12px; text-transform: uppercase; }
+table.pid td:first-child { text-align: left; font-weight: 600; }
+table.pid input { width: 74px; background: #111318; color: var(--text); border: 1px solid #343a45; border-radius: 5px; padding: 5px; font-size: 14px; text-align: center; }
+
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 90px 1fr 60px; gap: 8px; align-items: center; font-size: 12px; }
+.bar .track { height: 12px; background: #111318; border-radius: 6px; position: relative; overflow: hidden; border: 1px solid #2c313a; }
+.bar .fill { position: absolute; top: 0; bottom: 0; background: var(--accent2); }
+.bar .mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #555; }
+.wizard { background: #111318; border: 1px solid var(--accent); border-radius: 8px; padding: 12px; margin: 10px 0; }
+.wizard p { margin: 0 0 10px; font-size: 14px; }
+.derived { font-family: ui-monospace, monospace; font-size: 13px; color: var(--good); }
+canvas.graph { background: #111318; border: 1px solid var(--line); border-radius: 6px; }
+kbd { background: #2a2f38; border: 1px solid #444; border-radius: 4px; padding: 1px 6px; font-size: 12px; }

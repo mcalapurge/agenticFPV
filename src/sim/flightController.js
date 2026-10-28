@@ -65,6 +65,7 @@ export class FlightController {
     this.prevGyro.fill(0);
     this.prevSetpoint.fill(0);
     this.motors.fill(0);
+    this.airmodeActive = false;
     for (const k in this.rcSmooth) this.rcSmooth[k].reset(0);
     this.gyroLpf.forEach((p) => p.reset());
     this.dtermLpf.forEach((p) => p.reset());
@@ -113,7 +114,12 @@ export class FlightController {
       tpa = 1 - (pid.tpaRate * (throttle - pid.tpaBreakpoint)) / Math.max(1e-3, 1 - pid.tpaBreakpoint);
     }
 
-    const lowThrottleNoAirmode = !pid.airmode && throttle < 0.02;
+    // Betaflight only activates airmode once throttle has been raised (prevents I-term
+    // windup and motor spool-up while sitting on the ground after arming).
+    if (!this.armed) this.airmodeActive = false;
+    else if (throttle > 0.25) this.airmodeActive = true;
+    const airmode = pid.airmode && this.airmodeActive;
+    const lowThrottleNoAirmode = !airmode && throttle < 0.02;
 
     for (let a = 0; a < 3; a++) {
       const g = AXES[a];
@@ -173,9 +179,9 @@ export class FlightController {
       for (let i = 0; i < 4; i++) mix[i] /= range;
       mixMin /= range;
       mixMax /= range;
-      if (pid.airmode) thr = 0.5;
+      if (airmode) thr = 0.5;
     }
-    if (pid.airmode) thr = Math.min(1 - mixMax, Math.max(-mixMin, thr));
+    if (airmode) thr = Math.min(1 - mixMax, Math.max(-mixMin, thr));
 
     const idle = cfg.flight.motorIdle;
     for (let i = 0; i < 4; i++) {

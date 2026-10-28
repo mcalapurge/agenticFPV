@@ -91,14 +91,14 @@ export const DEFAULT_CONFIG = {
     channels: {
       throttle: { axis: 2, invert: false, min: -1, center: 0, max: 1 },
       yaw: { axis: 3, invert: false, min: -1, center: 0, max: 1 },
-      pitch: { axis: 1, invert: true, min: -1, center: 0, max: 1 },
+      pitch: { axis: 1, invert: false, min: -1, center: 0, max: 1 },
       roll: { axis: 0, invert: false, min: -1, center: 0, max: 1 },
     },
     deadband: 0.01,
     // Arm switch: { type: 'axis'|'button'|'none', index, threshold, invert }
-    arm: { type: 'axis', index: 4, threshold: 0.3, invert: false },
+    arm: { type: 'axis', index: 4, threshold: 0.3, invert: false, toggle: false },
     reset: { type: 'button', index: -1 },
-    mode: { type: 'none', index: 5, threshold: 0.3, invert: false }, // angle-mode switch
+    mode: { type: 'none', index: 5, threshold: 0.3, invert: false, toggle: false }, // angle-mode switch
   },
 };
 
