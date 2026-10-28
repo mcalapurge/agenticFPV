@@ -3,10 +3,8 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {
-  rand, rr, setSeed, concreteTexture, brickTexture, asphaltTexture, metalTexture, woodTexture,
-  grassAlphaTexture, graffitiTexture,
-} from './textures.js';
+import { rand, rr, setSeed, grassAlphaTexture, graffitiTexture, weedsTexture, chainLinkTexture } from './textures.js';
+import { buildMaterials } from './pbr.js';
 
 const TEX_SCALE = 4; // metres per texture tile
 
@@ -52,6 +50,21 @@ class Builder {
   /** Arbitrary geometry (already positioned), no collider. */
   geom(g, mat) {
     this._push(mat, g);
+  }
+
+  /**
+   * Place a geometry with position/rotation; optional box collider { half: [hx,hy,hz], offset: [x,y,z] } in local space.
+   */
+  prop(g, mat, pos, rot = [0, 0, 0], collider = null) {
+    this._e.set(rot[0], rot[1], rot[2]);
+    this._q.setFromEuler(this._e);
+    this._m.compose(new THREE.Vector3(...pos), this._q, new THREE.Vector3(1, 1, 1));
+    g.applyMatrix4(this._m);
+    this._push(mat, g);
+    if (collider) {
+      const off = new THREE.Vector3(...(collider.offset || [0, 0, 0])).applyQuaternion(this._q).add(new THREE.Vector3(...pos));
+      this.collision.addBox(off, new THREE.Vector3(...collider.half), this._q.clone());
+    }
   }
 
   cylinder(x, y, z, rTop, rBot, h, mat, { segs = 16, collide = true, uvScale = 1 } = {}) {
@@ -132,7 +145,7 @@ class Builder {
  */
 function placeGraffiti(scene) {
   scene.updateMatrixWorld(true);
-  const solids = scene.children.filter((o) => o.isMesh && !o.material.transparent);
+  const solids = scene.children.filter((o) => o.isMesh && !o.isInstancedMesh && !o.material.transparent && !o.material.alphaTest);
   const ray = new THREE.Raycaster();
   const candidates = [];
   for (let i = 0; i < 260; i++) {
@@ -189,32 +202,194 @@ function rubble(b, cx, cz, radius, count, mat = 'concrete') {
   }
 }
 
+// ── Detailed props ──────────────────────────────────────────────────────────
+const DRUM_PROFILE = [
+  [0, 0], [0.27, 0], [0.285, 0.008], [0.285, 0.29], [0.298, 0.3], [0.285, 0.31], [0.285, 0.58], [0.298, 0.59],
+  [0.285, 0.6], [0.285, 0.865], [0.292, 0.88], [0.27, 0.884], [0.26, 0.872], [0, 0.872],
+].map(([r, y]) => new THREE.Vector2(r, y));
+
+function drum(b, x, z, mat, tipped) {
+  const g = new THREE.LatheGeometry(DRUM_PROFILE, 22);
+  if (tipped) b.prop(g, mat, [x, 0.29, z], [Math.PI / 2, 0, rand() * Math.PI], { half: [0.29, 0.44, 0.29], offset: [0, 0.44, 0] });
+  else b.prop(g, mat, [x, 0, z], [0, rand() * 6, 0], { half: [0.29, 0.44, 0.29], offset: [0, 0.44, 0] });
+}
+
+function pallet(b, x, z, y, ry) {
+  const c = Math.cos(ry), s = Math.sin(ry);
+  const put = (lx, ly, lz, w, h, d) => b.box(x + lx * c + lz * s, y + ly, z - lx * s + lz * c, w, h, d, 'wood', { rot: [0, ry, 0], collide: false, scale: 1.2 });
+  for (let i = 0; i < 5; i++) put(-0.5 + i * 0.25, 0.122, 0, 0.1, 0.022, 0.8); // top deck
+  for (const lz of [-0.36, 0, 0.36]) put(0, 0.022, lz, 1.2, 0.1, 0.1); // stringers
+  for (const lx of [-0.5, 0, 0.5]) put(lx, 0, 0, 0.1, 0.022, 0.8); // bottom boards
+}
+
+function tyreStack(b, x, z, n) {
+  for (let i = 0; i < n; i++) {
+    const g = new THREE.TorusGeometry(0.28, 0.11, 10, 24);
+    b.prop(g, 'rubber', [x + rr(-0.05, 0.05), 0.11 + i * 0.22, z + rr(-0.05, 0.05)], [Math.PI / 2, 0, 0]);
+  }
+  b.collision.addBox(new THREE.Vector3(x, n * 0.11, z), new THREE.Vector3(0.38, n * 0.11, 0.38));
+}
+
+function cone(b, x, z) {
+  const g = new THREE.LatheGeometry([[0, 0], [0.2, 0], [0.2, 0.03], [0.12, 0.03], [0.03, 0.7], [0, 0.71]].map(([r, y]) => new THREE.Vector2(r, y)), 16);
+  b.prop(g, 'cone', [x, 0, z], [0, 0, rand() < 0.2 ? Math.PI / 2 - 0.1 : 0]);
+}
+
+function deadTree(b, x, z) {
+  const h = rr(5, 9);
+  b.prop(new THREE.CylinderGeometry(0.1, 0.22, h, 8), 'bark', [x, h / 2, z], [rr(-0.08, 0.08), 0, rr(-0.08, 0.08)], { half: [0.16, h / 2, 0.16] });
+  const n = 4 + Math.floor(rand() * 4);
+  for (let i = 0; i < n; i++) {
+    const L = rr(1.2, 3), y = rr(h * 0.4, h * 0.95), a = rand() * Math.PI * 2, tilt = rr(0.5, 1.1);
+    const g = new THREE.CylinderGeometry(0.02, 0.07, L, 6);
+    g.translate(0, L / 2, 0);
+    b.prop(g, 'bark', [x, y, z], [Math.cos(a) * tilt, 0, Math.sin(a) * tilt]);
+    // twig
+    const g2 = new THREE.CylinderGeometry(0.01, 0.03, L * 0.5, 5);
+    g2.translate(0, L * 0.25, 0);
+    const tip = new THREE.Vector3(0, L * 0.8, 0).applyEuler(new THREE.Euler(Math.cos(a) * tilt, 0, Math.sin(a) * tilt));
+    b.prop(g2, 'bark', [x + tip.x, y + tip.y, z + tip.z], [Math.cos(a + 1) * (tilt + 0.4), 0, Math.sin(a + 1) * (tilt + 0.4)]);
+  }
+}
+
+function rebar(b, x, y, z, n = 4) {
+  for (let i = 0; i < n; i++) {
+    const L = rr(0.4, 1.4);
+    const g = new THREE.CylinderGeometry(0.011, 0.011, L, 5);
+    g.translate(0, L / 2, 0);
+    b.prop(g, 'rust', [x + rr(-0.3, 0.3), y, z + rr(-0.3, 0.3)], [rr(-0.5, 0.5), 0, rr(-0.5, 0.5)]);
+  }
+}
+
+function fence(b, scene, x0, z0, x1, z1) {
+  const L = Math.hypot(x1 - x0, z1 - z0);
+  const n = Math.round(L / 3);
+  const ry = Math.atan2(-(z1 - z0), x1 - x0);
+  const mat = new THREE.MeshStandardMaterial({ map: chainLinkTexture(), alphaTest: 0.5, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5 });
+  mat.map.repeat.set(3, 2.2);
+  const geos = [];
+  for (let i = 0; i < n; i++) {
+    const t0 = i / n, t1 = (i + 1) / n;
+    const ax = x0 + (x1 - x0) * t0, az = z0 + (z1 - z0) * t0;
+    const cx = x0 + (x1 - x0) * (t0 + t1) / 2, cz = z0 + (z1 - z0) * (t0 + t1) / 2;
+    b.cylinder(ax, 0, az, 0.035, 0.035, 2.3, 'steel', { segs: 8 });
+    if (rand() < 0.15) continue; // torn-down panel
+    const lean = rand() < 0.15 ? rr(-0.35, 0.35) : 0;
+    const g = new THREE.PlaneGeometry(L / n, 2.1);
+    g.translate(0, 1.05, 0);
+    g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(lean, ry, 0, 'YXZ')));
+    g.translate(cx, 0.1, cz);
+    geos.push(g);
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(lean, ry, 0, 'YXZ'));
+    b.collision.addBox(new THREE.Vector3(0, 1.15, 0).applyQuaternion(q).add(new THREE.Vector3(cx, 0, cz)), new THREE.Vector3(L / n / 2, 1.05, 0.03), q);
+  }
+  b.cylinder(x1, 0, z1, 0.035, 0.035, 2.3, 'steel', { segs: 8 });
+  const m = new THREE.Mesh(mergeGeometries(geos), mat);
+  m.castShadow = true;
+  scene.add(m);
+}
+
+function props(b, scene) {
+  // pallets (some stacked) around the warehouse and yard
+  for (let i = 0; i < 26; i++) {
+    const near = [[22, -10], [60, -12], [-35, 20], [45, 18], [-60, 10], [70, -60]][i % 6];
+    const x = near[0] + rr(-6, 6), z = near[1] + rr(-4, 4), ry = rand() * Math.PI;
+    const stack = 1 + Math.floor(rand() * 4);
+    for (let k = 0; k < stack; k++) pallet(b, x, z, k * 0.144, ry + rr(-0.08, 0.08));
+    b.collision.addBox(new THREE.Vector3(x, stack * 0.072, z), new THREE.Vector3(0.62, stack * 0.072, 0.62), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry));
+  }
+  for (let i = 0; i < 10; i++) tyreStack(b, rr(-90, 90), rr(-90, 90), 2 + Math.floor(rand() * 4));
+  for (let i = 0; i < 6; i++) tyreStack(b, -48 + rr(-8, 8), 42 + rr(-4, 4), 1 + Math.floor(rand() * 5));
+  for (let i = 0; i < 18; i++) cone(b, rr(-25, 25), rr(0, 45));
+  for (const [x, z] of [[-90, 70], [-100, -40], [100, 90], [85, 20], [-20, 100], [30, 95], [-105, 15], [110, -100]]) deadTree(b, x, z);
+
+  // Stairs inside skeleton A's stair core (3 floors).
+  for (let f = 0; f < 3; f++)
+    for (let i = 0; i < 20; i++) b.box(-29.2, f * 3.6 + i * 0.18, -16.6 + i * 0.28 + 0.14, 2, 0.18, 0.28, 'concreteLight');
+  // Exposed rebar on the skeleton's broken top slab edges and the collapsed slab.
+  for (let x = -55; x <= -25; x += 3) { rebar(b, x, 18, -30); rebar(b, x, 18, -10); }
+  for (let z = -30; z <= -10; z += 3) { rebar(b, -55, 18, z); rebar(b, -25, 18, z); }
+  for (let i = 0; i < 6; i++) rebar(b, -43 + rr(-3, 3), 1.6, -7 + rr(-2, 2), 3);
+
+  // Chain-link fence around the container yard (with gaps).
+  fence(b, scene, -76, 18, -52, 18);
+  fence(b, scene, -36, 18, -22, 18);
+  fence(b, scene, -76, 18, -76, 60);
+}
+
+function streetLamps(b, scene) {
+  const spots = [[10, 50], [-10, 35], [10, 20], [-10, 5], [10, -10], [-22, -40], [25, -50], [-62, 22], [-30, 62], [55, 10], [80, -30], [-80, -50]];
+  const positions = [];
+  const headGeos = [];
+  for (const [x, z] of spots) {
+    b.cylinder(x, 0, z, 0.07, 0.11, 7, 'steel', { segs: 10 });
+    const toward = Math.atan2(-x, -z); // arm points toward the road centre
+    const ax = Math.sin(toward), az = Math.cos(toward);
+    const arm = new THREE.CylinderGeometry(0.04, 0.04, 1.4, 6);
+    arm.rotateZ(Math.PI / 2);
+    b.prop(arm, 'steel', [x + ax * 0.6, 6.95, z + az * 0.6], [0, Math.atan2(-az, ax), 0]);
+    const hx = x + ax * 1.3, hz = z + az * 1.3;
+    const head = new THREE.BoxGeometry(0.55, 0.12, 0.28);
+    head.rotateY(Math.atan2(-az, ax));
+    head.translate(hx, 6.88, hz);
+    headGeos.push(head);
+    positions.push(new THREE.Vector3(hx, 6.85, hz));
+  }
+  const mat = new THREE.MeshStandardMaterial({ color: '#fff3d6', emissive: '#ffcf8a', emissiveIntensity: 0.05, roughness: 0.4 });
+  const heads = new THREE.Mesh(mergeGeometries(headGeos), mat);
+  scene.add(heads);
+  return { positions, meshes: [heads] };
+}
+
+function weeds(scene) {
+  const tex = weedsTexture();
+  const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1 });
+  const g1 = new THREE.PlaneGeometry(1, 0.7);
+  g1.translate(0, 0.35, 0);
+  const g2 = g1.clone().rotateY(Math.PI / 2);
+  const geo = mergeGeometries([g1, g2]);
+  const N = 1800;
+  const inst = new THREE.InstancedMesh(geo, mat, N);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  let k = 0;
+  for (let i = 0; i < N; i++) {
+    // cluster weeds along building footprints and the perimeter
+    let x, z;
+    const r = rand();
+    if (r < 0.25) { x = rr(-56, -24); z = rand() < 0.5 ? rr(-32, -29) : rr(-11, -8); }
+    else if (r < 0.45) { x = rand() < 0.5 ? rr(16, 19) : rr(61, 64); z = rr(-37, -13); }
+    else if (r < 0.6) { x = rr(-122, 122); z = rand() < 0.5 ? rr(-124, -119) : rr(119, 124); }
+    else { x = rr(-120, 120); z = rr(-120, 120); }
+    if (Math.hypot(x, z - 60) < 6) continue;
+    const s = rr(0.6, 1.8);
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI);
+    m.compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(s, s * rr(0.7, 1.3), s));
+    inst.setMatrixAt(k++, m);
+  }
+  inst.count = k;
+  inst.receiveShadow = true;
+  scene.add(inst);
+}
+
 function container(b, x, z, y, ry, mat) {
   b.box(x, y, z, 12.2, 2.6, 2.44, mat, { rot: [0, ry, 0], scale: 3 });
 }
 
-export function buildMap(scene, collision) {
+export async function buildMap(scene, collision, renderer, progress = () => {}) {
   setSeed(20261028);
-  const materials = {
-    concrete: new THREE.MeshStandardMaterial({ map: concreteTexture('#8d8a84'), roughness: 0.95 }),
-    concreteDark: new THREE.MeshStandardMaterial({ map: concreteTexture('#6e6c68', false), roughness: 0.95 }),
-    concreteLight: new THREE.MeshStandardMaterial({ map: concreteTexture('#a7a297'), roughness: 0.9 }),
-    brick: new THREE.MeshStandardMaterial({ map: brickTexture(), roughness: 0.95 }),
-    rust: new THREE.MeshStandardMaterial({ map: metalTexture('#6e4329'), roughness: 0.7, metalness: 0.4 }),
-    contBlue: new THREE.MeshStandardMaterial({ map: metalTexture('#2c4b6e'), roughness: 0.7, metalness: 0.3 }),
-    contRed: new THREE.MeshStandardMaterial({ map: metalTexture('#7a2a22'), roughness: 0.7, metalness: 0.3 }),
-    contGreen: new THREE.MeshStandardMaterial({ map: metalTexture('#3d5a35'), roughness: 0.7, metalness: 0.3 }),
-    wood: new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.95 }),
-  };
+  const { materials, source } = await buildMaterials(progress);
+  materials.rubber = new THREE.MeshStandardMaterial({ color: '#161616', roughness: 0.92 });
+  materials.cone = new THREE.MeshStandardMaterial({ color: '#ff5a14', roughness: 0.6 });
+  materials.bark = new THREE.MeshStandardMaterial({ color: '#3b3029', roughness: 0.95, map: materials.wood.map, normalMap: materials.wood.normalMap });
+  materials.steel = new THREE.MeshStandardMaterial({ color: '#5d6066', roughness: 0.5, metalness: 0.7 });
   const b = new Builder(materials, collision);
+  progress('Building the abandoned works…');
 
   // ── Ground ────────────────────────────────────────────────────────────────
-  const groundTex = asphaltTexture();
-  groundTex.repeat.set(50, 50);
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(600, 600),
-    new THREE.MeshStandardMaterial({ map: groundTex, roughness: 1 }),
-  );
+  const groundMat = materials.asphalt;
+  for (const t of [groundMat.map, groundMat.normalMap, groundMat.roughnessMap]) t?.repeat.set(50, 50);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
@@ -389,8 +564,9 @@ export function buildMap(scene, collision) {
   for (let i = 0; i < 40; i++) {
     const x = rr(-110, 110), z = rr(-110, 110);
     if (Math.hypot(x, z - 60) < 12) continue; // keep spawn clear
-    b.cylinder(x, 0, z, 0.3, 0.3, 0.9, i % 3 ? 'rust' : 'contBlue', { segs: 12 });
+    drum(b, x, z, i % 3 ? 'rust' : i % 2 ? 'contBlue' : 'contRed', rand() < 0.25);
   }
+  props(b, scene);
   for (let i = 0; i < 10; i++) rubble(b, rr(-100, 100), rr(-100, 100), rr(1.5, 3.5), 10);
   // concrete jersey barriers
   for (let i = 0; i < 14; i++) b.box(rr(-20, 20), 0, rr(5, 30), 3, 0.9, 0.6, 'concreteLight', { rot: [0, rand() * Math.PI, 0] });
@@ -419,11 +595,15 @@ export function buildMap(scene, collision) {
       scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat));
     }
 
+  const lamps = streetLamps(b, scene);
   b.finish(scene);
+  weeds(scene);
   placeGraffiti(scene);
 
   return {
     spawn: { pos: new THREE.Vector3(0, 0.2, 60), yaw: 0 },
     materials,
+    textureSource: source,
+    lamps,
   };
 }

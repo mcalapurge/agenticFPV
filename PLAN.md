@@ -38,9 +38,9 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 - [x] **M10 Motor audio** — WebAudio synth: per-motor whine + blade-pass tones, prop wash, impacts, volume
 - [x] **M11 Game modes** — tracks (3 built-in + custom), track editor, race mode (countdown, laps, missed gates,
   results), time-trial ghost of best lap, local leaderboards, DVR replay
-- [ ] **M12 Video & environment** — post-FX (fisheye, analog static/breakup by range & walls, digital HD look),
+- [x] **M12 Video & environment** — post-FX (fisheye, analog static/breakup by range & walls, digital HD look),
   time-of-day presets, CC0 HDRI image-based lighting (@pmndrs/assets → Poly Haven)
-- [ ] **M13 Visual upgrade** — PBR procedural textures (normal + roughness), detailed props (barrels, pallets,
+- [x] **M13 Visual upgrade** — PBR procedural textures (normal + roughness), detailed props (barrels, pallets,
   rebar, stairs, fences, lamps, tyres), optional `npm run fetch-assets` for CC0 Poly Haven textures
 - [ ] **M14 Betaflight CLI import, UI, docs, verification**
 
@@ -91,3 +91,14 @@ environment's network policy, so real photo textures are fetched by a script the
   missed-gate warnings, results card, local leaderboard (top 10 per track × quad), PB ghost replay,
   90 s DVR replay (P: seek/speed/pause/camera). Editor: G place (dive if nose down), Backspace undo,
   save/import/export JSON. Smoke-tested: race of 2 laps → results + PB; replay.
+- **M12** Post-FX pass: fisheye lens, chromatic aberration, vignette; analog link (static, desaturation,
+  tearing/rolling breakup) or digital HD link (blocking, freeze, signal loss) driven by distance + number of
+  walls between pilot and quad (segment-vs-OBB occlusion query), VTX power setting, RSSI/LQ on OSD.
+  Time of day: midday, golden hour, overcast, dusk, night (stars + street lamps with nearest-6 point lights).
+  IBL from CC0 Poly Haven HDRIs bundled via @pmndrs/assets.
+- **M13** Procedural PBR materials (tileable fBm heightfields → albedo/normal/roughness): concrete ×3, brick
+  with mortar + chips, sparse-cracked asphalt with weeds, corrugated painted/rusty metal ×4, wood.
+  Props: ribbed lathe oil drums (some tipped), stacked pallets, tyre stacks, cones, dead trees, stair flights,
+  exposed rebar, chain-link fencing (alpha, colliders), 12 street lamps, 1.8k instanced weed tufts.
+  `npm run fetch-assets` pulls CC0 Poly Haven textures into public/textures + manifest (verified against a mock
+  API; game auto-switches to photo textures when present, falls back to procedural otherwise).

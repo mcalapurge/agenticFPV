@@ -33,7 +33,8 @@ const post = new PostFX(renderer);
 
 // ── World ─────────────────────────────────────────────────────────────────
 const collision = new CollisionWorld();
-const map = await buildMap(scene, collision, renderer);
+const loadingEl = document.getElementById('loading');
+const map = await buildMap(scene, collision, renderer, (msg) => (loadingEl.textContent = msg));
 const spawn = map.spawn;
 if (map.lamps) env.setLamps(map.lamps.positions, map.lamps.meshes);
 
@@ -232,7 +233,7 @@ function videoFx(t) {
       pixelate: bad > 0 ? 1 + bad * 22 : 0, freeze: lost || (bad > 0.5 && Math.sin(t * 9) > 0.2),
     };
   }
-  const noise = Math.pow(1 - s, 1.6) * v.staticAmount;
+  const noise = Math.pow(1 - s, 2.2) * v.staticAmount;
   return {
     enabled: true, fisheye: v.fisheye, chroma: v.chroma, vignette: v.vignette, digital: 0, scanlines: v.scanlines,
     staticAmt: Math.min(1, 0.04 * v.staticAmount + noise), breakup: s < 0.35 ? ((0.35 - s) / 0.35) * v.staticAmount : 0,
@@ -329,12 +330,12 @@ function frame(now) {
   post.render(scene, camera, videoFx(now / 1000), now / 1000);
 }
 
-document.getElementById('loading').classList.add('done');
+loadingEl.classList.add('done');
 toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · P = replay · H = help', 6000);
 requestAnimationFrame(frame);
 
 // Expose for debugging / automated smoke tests.
 window.__fpv = {
-  audio, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad,
+  audio, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad, textureSource: map.textureSource,
   get quadModel() { return quadModel; },
 };

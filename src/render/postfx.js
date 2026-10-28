@@ -50,7 +50,7 @@ void main(){
   if (digital < 0.5) {
     // Analog: slight softness, desaturation as signal fades, static noise, scanlines.
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col = mix(col, vec3(lum), clamp(staticAmt * 1.4, 0.0, 0.9));
+    col = mix(col, vec3(lum), clamp(staticAmt * 1.1, 0.0, 0.9));
     float n = hash(uv * resolution + fract(time * 61.0) * 100.0);
     float sparkle = step(1.0 - staticAmt * 0.25, hash(vec2(floor(uv.y * 400.0), floor(time * 60.0)) + uv.x));
     col = mix(col, vec3(n), clamp(staticAmt, 0.0, 1.0) * 0.85) + sparkle * staticAmt * 0.6;

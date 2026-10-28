@@ -34,148 +34,12 @@ function noise(ctx, size, amount, alpha = 1) {
   ctx.putImageData(img, 0, 0);
 }
 
-function blotches(ctx, size, count, color, rMin, rMax, aMax) {
-  for (let i = 0; i < count; i++) {
-    const x = rand() * size, y = rand() * size, r = rr(rMin, rMax);
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, color.replace('A', (rand() * aMax).toFixed(3)));
-    g.addColorStop(1, color.replace('A', '0'));
-    ctx.fillStyle = g;
-    // draw wrapped so the texture tiles
-    for (const ox of [-size, 0, size]) for (const oy of [-size, 0, size]) {
-      ctx.save();
-      ctx.translate(ox, oy);
-      ctx.fillRect(x - r, y - r, r * 2, r * 2);
-      ctx.restore();
-    }
-  }
-}
-
-function cracks(ctx, size, count, color = 'rgba(20,20,20,0.6)') {
-  ctx.strokeStyle = color;
-  for (let i = 0; i < count; i++) {
-    let x = rand() * size, y = rand() * size;
-    let a = rand() * Math.PI * 2;
-    ctx.lineWidth = rr(0.6, 1.8);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    const n = 6 + rand() * 14;
-    for (let k = 0; k < n; k++) {
-      a += rr(-0.7, 0.7);
-      x += Math.cos(a) * rr(4, 14);
-      y += Math.sin(a) * rr(4, 14);
-      ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-}
-
-function streaks(ctx, size, count) {
-  // Water stains running down walls.
-  for (let i = 0; i < count; i++) {
-    const x = rand() * size, w = rr(4, 30), h = rr(size * 0.2, size * 0.9);
-    const y = rand() * size * 0.3;
-    const g = ctx.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, `rgba(40,35,30,${rr(0.15, 0.4).toFixed(2)})`);
-    g.addColorStop(1, 'rgba(40,35,30,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x, y, w, h);
-  }
-}
-
 function toTexture(c, repeat = true) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 8;
   return t;
-}
-
-export function concreteTexture(base = '#8d8a84', stains = true) {
-  const S = 512;
-  const [c, ctx] = canvas(S);
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, S, S);
-  blotches(ctx, S, 60, 'rgba(60,58,52,A)', 20, 120, 0.25);
-  blotches(ctx, S, 40, 'rgba(200,198,190,A)', 20, 90, 0.15);
-  blotches(ctx, S, 12, 'rgba(70,80,40,A)', 20, 70, 0.2); // moss
-  if (stains) streaks(ctx, S, 25);
-  cracks(ctx, S, 10);
-  // formwork lines
-  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-  ctx.lineWidth = 2;
-  for (let y = 0; y <= S; y += S / 4) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(S, y); ctx.stroke();
-  }
-  noise(ctx, S, 38);
-  return toTexture(c);
-}
-
-export function brickTexture() {
-  const S = 512;
-  const [c, ctx] = canvas(S);
-  ctx.fillStyle = '#5a4c42';
-  ctx.fillRect(0, 0, S, S);
-  const bw = 64, bh = 24;
-  for (let row = 0; row < S / bh; row++) {
-    const off = row % 2 ? bw / 2 : 0;
-    for (let col = -1; col < S / bw + 1; col++) {
-      const r = 105 + rand() * 40, g = 62 + rand() * 22, b = 50 + rand() * 18;
-      ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`;
-      ctx.fillRect(col * bw + off + 2, row * bh + 2, bw - 4, bh - 4);
-    }
-  }
-  blotches(ctx, S, 40, 'rgba(30,25,20,A)', 30, 120, 0.35);
-  streaks(ctx, S, 20);
-  noise(ctx, S, 30);
-  return toTexture(c);
-}
-
-export function asphaltTexture() {
-  const S = 1024;
-  const [c, ctx] = canvas(S);
-  ctx.fillStyle = '#3d3d3b';
-  ctx.fillRect(0, 0, S, S);
-  blotches(ctx, S, 120, 'rgba(20,20,20,A)', 20, 160, 0.3);
-  blotches(ctx, S, 80, 'rgba(110,105,95,A)', 20, 120, 0.2);
-  blotches(ctx, S, 40, 'rgba(60,75,35,A)', 10, 60, 0.35); // weeds
-  cracks(ctx, S, 60, 'rgba(10,10,10,0.7)');
-  noise(ctx, S, 50);
-  return toTexture(c);
-}
-
-export function metalTexture(base = '#7a4a2a') {
-  const S = 256;
-  const [c, ctx] = canvas(S);
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, S, S);
-  // corrugation
-  for (let x = 0; x < S; x += 16) {
-    const g = ctx.createLinearGradient(x, 0, x + 16, 0);
-    g.addColorStop(0, 'rgba(0,0,0,0.25)');
-    g.addColorStop(0.5, 'rgba(255,255,255,0.12)');
-    g.addColorStop(1, 'rgba(0,0,0,0.25)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x, 0, 16, S);
-  }
-  blotches(ctx, S, 40, 'rgba(120,60,20,A)', 6, 50, 0.6); // rust
-  blotches(ctx, S, 20, 'rgba(40,20,10,A)', 6, 40, 0.5);
-  noise(ctx, S, 30);
-  return toTexture(c);
-}
-
-export function woodTexture() {
-  const S = 256;
-  const [c, ctx] = canvas(S);
-  ctx.fillStyle = '#6b5236';
-  ctx.fillRect(0, 0, S, S);
-  for (let y = 0; y < S; y += 3) {
-    ctx.fillStyle = `rgba(40,25,10,${rr(0, 0.25).toFixed(2)})`;
-    ctx.fillRect(0, y, S, 1 + rand() * 2);
-  }
-  blotches(ctx, S, 15, 'rgba(30,30,30,A)', 10, 50, 0.4);
-  noise(ctx, S, 25);
-  return toTexture(c);
 }
 
 export function grassAlphaTexture() {
@@ -222,5 +86,44 @@ export function graffitiTexture() {
   ctx.fillStyle = `hsla(${hue},85%,45%,0.8)`;
   for (let i = 0; i < 8; i++) ctx.fillRect(rr(-200, 200), rr(20, 50), 3, rr(20, 80));
   const t = toTexture(c, false);
+  return t;
+}
+
+/** Weed tuft billboard (alpha-tested blades). */
+export function weedsTexture() {
+  const [c, ctx] = canvas(256);
+  ctx.clearRect(0, 0, 256, 256);
+  for (let i = 0; i < 90; i++) {
+    const x = 20 + rand() * 216;
+    const h = rr(60, 230);
+    const bend = rr(-40, 40);
+    const g = 70 + rand() * 60;
+    ctx.strokeStyle = `rgb(${(g * 0.75) | 0},${g | 0},${(g * 0.35) | 0})`;
+    if (rand() < 0.25) ctx.strokeStyle = `rgb(${(130 + rand() * 40) | 0},${(115 + rand() * 30) | 0},60)`; // dry blades
+    ctx.lineWidth = rr(1.5, 4);
+    ctx.beginPath();
+    ctx.moveTo(x, 256);
+    ctx.quadraticCurveTo(x + bend * 0.3, 256 - h * 0.6, x + bend, 256 - h);
+    ctx.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Galvanised chain-link mesh (tileable, alpha-tested). */
+export function chainLinkTexture() {
+  const [c, ctx] = canvas(128);
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.strokeStyle = '#b9bcbf';
+  ctx.lineWidth = 3;
+  for (let k = -128; k <= 256; k += 32) {
+    ctx.beginPath(); ctx.moveTo(k, 0); ctx.lineTo(k + 128, 128); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(k, 128); ctx.lineTo(k + 128, 0); ctx.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.repeat.set(4, 4);
   return t;
 }
