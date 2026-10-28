@@ -20,7 +20,8 @@ const SCHEMA = {
     { title: 'Airframe', fields: [
       { path: 'physics.massG', label: 'All-up weight', unit: 'g', min: 150, max: 1500, step: 5 },
       { path: 'physics.motorThrustG', label: 'Max thrust / motor', unit: 'g', min: 300, max: 3000, step: 10 },
-      { path: 'physics.armLengthMm', label: 'Motor distance', unit: 'mm', min: 40, max: 200, step: 1, help: 'centre → motor' },
+      { path: 'physics.armLengthMm', label: 'Motor distance', unit: 'mm', min: 30, max: 220, step: 1, help: 'centre → motor' },
+      { path: 'physics.propInches', label: 'Prop diameter', unit: 'in', min: 1, max: 8, step: 0.1 },
       { path: 'physics.inertiaRoll', label: 'Inertia roll', unit: 'kg·m²', min: 0.0005, max: 0.01, step: 0.0001 },
       { path: 'physics.inertiaPitch', label: 'Inertia pitch', unit: 'kg·m²', min: 0.0005, max: 0.01, step: 0.0001 },
       { path: 'physics.inertiaYaw', label: 'Inertia yaw', unit: 'kg·m²', min: 0.0005, max: 0.02, step: 0.0001 },
@@ -42,6 +43,11 @@ const SCHEMA = {
       { path: 'physics.propwash', label: 'Prop-wash intensity', min: 0, max: 3, step: 0.05 },
       { path: 'physics.gravity', label: 'Gravity', unit: 'm/s²', min: 1, max: 20, step: 0.01 },
     ] },
+    { title: 'Wind', fields: [
+      { path: 'physics.windSpeed', label: 'Wind speed', unit: 'm/s', min: 0, max: 20, step: 0.5 },
+      { path: 'physics.windDir', label: 'Wind from', unit: '°', min: 0, max: 359, step: 1, help: '0 = north (launch-pad heading)' },
+      { path: 'physics.windGust', label: 'Gusts / turbulence', min: 0, max: 1, step: 0.05 },
+    ] },
     { title: 'Battery', fields: [
       { path: 'physics.battery', label: 'Simulate battery sag', type: 'bool' },
       { path: 'physics.cells', label: 'Cells (S)', min: 1, max: 8, step: 1 },
@@ -54,6 +60,8 @@ const SCHEMA = {
       { path: 'physics.friction', label: 'Friction', min: 0, max: 1, step: 0.05 },
       { path: 'physics.crashEnabled', label: 'Crash on hard impact', type: 'bool' },
       { path: 'physics.crashSpeed', label: 'Crash impact speed', unit: 'm/s', min: 2, max: 40, step: 0.5 },
+      { path: 'physics.turtlePower', label: 'Turtle mode power', min: 0.2, max: 1, step: 0.05 },
+      { path: 'physics.reverseThrust', label: 'Reversed-prop efficiency', min: 0.1, max: 1, step: 0.05 },
     ] },
   ],
   filters: [
@@ -328,8 +336,8 @@ export class SettingsMenu {
         h('div', { class: 'section' }, h('h3', {}, 'Raw axes'), rawBars)),
       h('div', { class: 'section' }, h('h3', {}, 'Channel mapping & calibration'), mapping,
         this._field({ path: 'input.deadband', label: 'Deadband', min: 0, max: 0.2, step: 0.005 })),
-      h('div', { class: 'section' }, h('h3', {}, 'Switches'), swEditor('arm', 'Arm'), h('br'), swEditor('mode', 'Angle mode'),
-        h('p', { class: 'hint' }, 'Arming requires throttle low (BF-style). With no switch mapped, Space/Enter toggles arm.')),
+      h('div', { class: 'section' }, h('h3', {}, 'Switches'), swEditor('arm', 'Arm'), h('br'), swEditor('mode', 'Angle mode'), h('br'), swEditor('turtle', 'Turtle'),
+        h('p', { class: 'hint' }, 'Arming requires throttle low (BF-style). With no switch mapped, Space/Enter toggles arm. Turtle mode (crash flip) is latched when you arm with the turtle switch on (keyboard: T), then push the sticks toward the side you want to flip.')),
     );
   }
 

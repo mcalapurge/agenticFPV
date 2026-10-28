@@ -148,6 +148,7 @@ function resetQuad() {
   state.armed = false;
   fc.armed = false;
   state.crashed = false;
+  state.turtle = false;
   state.flightTime = 0;
   state.nextGate = 0;
   state.lapStart = null;
@@ -232,9 +233,14 @@ function updateArming(rc) {
     state.armed = false;
   } else if (!state.armed && throttleLow) {
     state.armed = true;
+    // Like Betaflight, turtle mode is latched at the moment of arming.
+    state.turtle = !!rc.turtleSwitch;
   }
+  if (!state.armed) state.turtle = false;
   fc.armed = state.armed;
+  fc.turtle = state.turtle;
   if (state.crashed) state.warning = 'CRASHED · PRESS R';
+  else if (state.turtle) state.warning = 'TURTLE';
   else if (rc.armSwitch && !state.armed) state.warning = 'THROTTLE HIGH';
   else state.warning = quad.battery.voltage / config.physics.cells < 3.4 && config.physics.battery ? 'LOW BATTERY' : '';
 }

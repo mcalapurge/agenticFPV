@@ -33,6 +33,7 @@ export class FlightController {
     this.dt = dt;
     this.config = config;
     this.armed = false;
+    this.turtle = false;
     this.rcSmooth = { throttle: new PT2(), roll: new PT2(), pitch: new PT2(), yaw: new PT2() };
     this.gyroLpf = AXES.map(() => new PT1());
     this.dtermLpf = AXES.map(() => new PT1());
@@ -95,6 +96,24 @@ export class FlightController {
     };
     const throttle = throttleCurve(thrRaw, rates.throttleMid, rates.throttleExpo) * rates.throttleLimit;
     this.throttle = throttle;
+
+    // Turtle mode (Betaflight "crash flip"): PIDs off, sticks spin the motors on one side
+    // in reverse to flip an upside-down quad back over.
+    if (this.armed && this.turtle) {
+      this.iTerm.fill(0);
+      this.pidOut.fill(0);
+      this.setpoint.fill(0);
+      const mag = Math.hypot(sticks.roll, sticks.pitch, sticks.yaw);
+      for (let i = 0; i < 4; i++) {
+        const m = MOTOR_LAYOUT[i];
+        // Reversed thrust on a motor pushes its side "down" in body frame:
+        // roll right → right motors, pitch forward → front motors, yaw → same-spin pair.
+        let amt = sticks.roll * m.x - sticks.pitch * m.z + sticks.yaw * m.dir;
+        amt = mag < 0.15 ? 0 : Math.max(0, Math.min(1, amt));
+        this.motors[i] = -amt * cfg.physics.turtlePower;
+      }
+      return this.motors;
+    }
 
     // Setpoints.
     for (let a = 0; a < 3; a++) {

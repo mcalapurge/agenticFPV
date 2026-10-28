@@ -31,7 +31,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 
 ## Phase 2 — Velocidrone-style features (no multiplayer)
 
-- [ ] **M8 Contact physics + turtle + wind** — multi-point rigid-body contacts (quad tips/rests realistically),
+- [x] **M8 Contact physics + turtle + wind** — multi-point rigid-body contacts (quad tips/rests realistically),
   reversible motors, Betaflight turtle mode (switch / `T`), wind + gusts
 - [ ] **M9 Quad classes + detailed models** — presets (5" race, 5" freestyle, 3" toothpick, cinewhoop,
   7" long range, 65mm tiny whoop) with high-poly procedural models (twisted 3-blade props, motor bells, ducts…)
@@ -74,3 +74,6 @@ environment's network policy, so real photo textures are fetched by a script the
 - Simulated analog video noise and breakup at range or behind walls.
 - More maps, a gate editor, and ghost replays.
 - Tests that pin the arming state machine and the lap-gate crossing logic.
+- **M8** Quad collides as 6 spheres (4 props + body + battery) with rigid-body impulses + Coulomb friction —
+  tumbles and settles flat. Reversible motors + BF turtle mode (latched at arm; switch or `T`). Wind with
+  Ornstein–Uhlenbeck gusts. Tests: rest after drop, turtle flip upright, wind drift (11/11 pass).

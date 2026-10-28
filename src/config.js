@@ -60,6 +60,12 @@ export const DEFAULT_CONFIG = {
     rotorDrag: 0.10, // linear "H-force" drag (N per m/s), scaled by thrust
     angularDrag: 0.0004,
     propwash: 1.0,
+    propInches: 5.1,
+    reverseThrust: 0.45, // reversed-prop thrust efficiency (turtle mode)
+    turtlePower: 0.85,
+    windSpeed: 0, // m/s
+    windDir: 45, // deg, direction the wind blows from
+    windGust: 0.3, // 0..1 turbulence
     gravity: 9.81,
     airDensity: 1.225,
     restitution: 0.3,
@@ -98,6 +104,7 @@ export const DEFAULT_CONFIG = {
     // Arm switch: { type: 'axis'|'button'|'none', index, threshold, invert }
     arm: { type: 'axis', index: 4, threshold: 0.3, invert: false, toggle: false },
     reset: { type: 'button', index: -1 },
+    turtle: { type: 'none', index: 6, threshold: 0.3, invert: false, toggle: false }, // crash-flip switch
     mode: { type: 'none', index: 5, threshold: 0.3, invert: false, toggle: false }, // angle-mode switch
   },
 };

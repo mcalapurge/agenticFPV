@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeSim, run, findHoverThrottle } from './sim-harness.js';
 import { actualRate, betaflightRate } from '../src/sim/rates.js';
+import { Vector3 } from 'three';
+import { CollisionWorld } from '../src/sim/collision.js';
 
 test('rates: actual rates hit center sensitivity and max', () => {
   const r = { rcRate: 70, rate: 670, expo: 0.54 };
@@ -59,4 +61,57 @@ test('full flip completes and quad recovers level-ish rates', () => {
   run(sim, 0.3, { throttle: 0.3, roll: 0, pitch: 0, yaw: 0 });
   const rates = sim.quad.gyro.map(Math.abs);
   assert.ok(rates.every((r) => r < 40), `residual rates ${rates}`);
+});
+
+function groundSim(mutate) {
+  const sim = makeSim((c) => { c.physics.battery = false; mutate?.(c); });
+  const world = new CollisionWorld();
+  sim.collide = (q) => world.resolveQuad(q, sim.cfg.physics);
+  return sim;
+}
+function runCollide(sim, seconds, rc) {
+  for (let i = 0; i < seconds * 1000; i++) {
+    const m = sim.fc.update(rc, sim.quad.gyro, sim.quad.attitude);
+    sim.quad.step(0.001, m, sim.collide);
+  }
+}
+const upY = (q) => new Vector3(0, 1, 0).applyQuaternion(q.quat).y;
+
+test('dropped quad tumbles and comes to rest on the ground', () => {
+  const sim = groundSim();
+  sim.fc.armed = false;
+  sim.quad.pos.set(0, 2, 0);
+  sim.quad.quat.setFromAxisAngle(new Vector3(1, 0, 1).normalize(), 2.2);
+  sim.quad.omega.set(3, 1, -4);
+  runCollide(sim, 4, { throttle: 0, roll: 0, pitch: 0, yaw: 0 });
+  const q = sim.quad;
+  console.log(`rest: y=${q.pos.y.toFixed(3)} v=${q.vel.length().toFixed(3)} w=${q.omega.length().toFixed(3)} upY=${upY(q).toFixed(2)}`);
+  assert.ok(q.pos.y > 0 && q.pos.y < 0.15, `height ${q.pos.y}`);
+  assert.ok(q.vel.length() < 0.05 && q.omega.length() < 0.2, 'not at rest');
+  assert.ok(Math.abs(upY(q)) > 0.9, 'should rest flat (upright or inverted)');
+});
+
+test('turtle mode flips an inverted quad back over', () => {
+  const sim = groundSim();
+  sim.quad.pos.set(0, 0.06, 0);
+  sim.quad.quat.setFromAxisAngle(new Vector3(0, 0, 1), Math.PI); // upside down
+  sim.fc.armed = false;
+  runCollide(sim, 1, { throttle: 0, roll: 0, pitch: 0, yaw: 0 });
+  assert.ok(upY(sim.quad) < -0.9, 'starts inverted');
+  sim.fc.armed = true;
+  sim.fc.turtle = true;
+  runCollide(sim, 1.5, { throttle: 0, roll: 1, pitch: 0, yaw: 0 });
+  sim.fc.armed = false;
+  runCollide(sim, 1.5, { throttle: 0, roll: 0, pitch: 0, yaw: 0 });
+  console.log(`after turtle upY=${upY(sim.quad).toFixed(2)}`);
+  assert.ok(upY(sim.quad) > 0.9, 'quad should be upright');
+});
+
+test('wind pushes a self-levelling quad downwind', () => {
+  const hover = findHoverThrottle();
+  const sim = makeSim((c) => { c.flight.mode = 'angle'; c.physics.battery = false; c.physics.windSpeed = 8; c.physics.windDir = 0; c.physics.windGust = 0; });
+  run(sim, 3, { throttle: hover, roll: 0, pitch: 0, yaw: 0 });
+  // windDir 0 = blowing from the north (-Z) toward +Z
+  console.log(`wind drift vz=${sim.quad.vel.z.toFixed(2)}`);
+  assert.ok(sim.quad.vel.z > 1, `vz ${sim.quad.vel.z}`);
 });

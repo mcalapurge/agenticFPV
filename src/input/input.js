@@ -31,8 +31,9 @@ export class InputManager {
     this.keys = new Set();
     this.kb = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
     this.usingKeyboard = true;
-    this.state = { throttle: 0, yaw: 0, pitch: 0, roll: 0, armSwitch: false, angleSwitch: null };
+    this.state = { throttle: 0, yaw: 0, pitch: 0, roll: 0, armSwitch: false, angleSwitch: null, turtleSwitch: false };
     this._kbArm = false;
+    this._kbTurtle = false;
     this._btnToggleArm = false;
     this._prevButtons = [];
     this.listeners = {}; // edge-triggered actions: reset, camera, menu, arm toggle
@@ -65,6 +66,7 @@ export class InputManager {
         this._kbArm = !this._kbArm;
       }
       if (k === 'm') this._emit('mode');
+      if (k === 't') this._kbTurtle = !this._kbTurtle;
       if (k === 'h') this._emit('help');
     }
     if (down) this.keys.add(k);
@@ -134,6 +136,8 @@ export class InputManager {
       const arm = this._switch(pad, cfgIn.arm, '_btnToggleArm');
       s.armSwitch = arm === null ? this._kbArm : arm;
       s.angleSwitch = this._switch(pad, cfgIn.mode, '_btnToggleMode');
+      const tsw = this._switch(pad, cfgIn.turtle, '_btnToggleTurtle');
+      s.turtleSwitch = tsw === null ? this._kbTurtle : tsw;
       const rb = cfgIn.reset;
       if (rb?.type === 'button' && rb.index >= 0) {
         const b = pad.buttons[rb.index];
@@ -146,6 +150,7 @@ export class InputManager {
       Object.assign(s, this.kb);
       s.armSwitch = this._kbArm;
       s.angleSwitch = null;
+      s.turtleSwitch = this._kbTurtle;
     }
     return s;
   }
