@@ -63,7 +63,8 @@ test('hotkeys: camera, flight mode, perf readout, blackbox, help', async ({ app 
   await expect(app.getByRole('tab', { name: 'Help' })).toHaveAttribute('aria-selected', 'true');
 });
 
-test('crashing into a wall disarms', async ({ app }) => {
+test('crashing into a wall disarms (when crash detection is on)', async ({ app }) => {
+  await app.evaluate(() => window.__fpv!.update((c) => void (c.physics.crashEnabled = true)));
   await app.keyboard.press('Space');
   await app.waitForFunction(() => window.__fpv!.sim.state.armed);
   // Fire the quad at the nearest wall at 30 m/s.
