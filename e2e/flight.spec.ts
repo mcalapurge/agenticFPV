@@ -48,7 +48,7 @@ test('hotkeys: camera, flight mode, perf readout, blackbox, help', async ({ app 
   expect((await cfg()).camera.mode).toBe('chase');
   await app.keyboard.press('m');
   expect((await cfg()).flight.mode).toBe('angle');
-  await expect(app.getByTestId('osd-tr')).toContainText('ANGLE');
+  await expect(app.getByTestId('osd-tr')).toContainText('ANGL'); // Betaflight's 4-char OSD flag
 
   await app.keyboard.press('f');
   await expect(app.getByTestId('osd-perf')).toContainText(/\d+ FPS/);
