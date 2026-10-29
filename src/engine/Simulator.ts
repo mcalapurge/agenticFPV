@@ -1,379 +1,492 @@
+// The simulator: renderer, world, 1 kHz physics/PID loop, cameras, game modes, replay, audio, effects.
+// UI lives in React; it talks to the engine through the stores and `onFrame` subscriptions.
+
 import * as THREE from 'three';
-import { loadConfig, saveConfig } from './config.js';
-import { FlightController } from './sim/flightController.js';
-import { Quad } from './sim/quad.js';
-import { CollisionWorld } from './sim/collision.js';
-import { QUAD_PRESETS } from './sim/presets.js';
-import { buildMap } from './world/map.js';
-import { buildQuadModel } from './world/quadModel.js';
-import { InputManager } from './input/input.js';
-import { SettingsMenu } from './ui/settings.js';
-import { OSD } from './ui/osd.js';
-import { MotorAudio } from './audio/motorAudio.js';
-import { Environment } from './render/environment.js';
-import { PostFX } from './render/postfx.js';
-import { detectGpu, gpuLabel } from './render/gpuInfo.js';
-import { PropWashEffects } from './render/propwash.js';
-import { Game } from './game/game.js';
-import { Replay } from './game/replay.js';
+import { CAMERA_MODES, type Config, type GameMode } from '../state/configSchema';
+import { getConfig, useConfigStore } from '../state/configStore';
+import { useUiStore, type GpuInfo } from '../state/uiStore';
+import { MotorAudio } from './audio/motorAudio';
+import { Game } from './game/game';
+import { Replay } from './game/replay';
+import { InputManager, type InputState } from './input/input';
+import { Environment } from './render/environment';
+import { detectGpu } from './render/gpuInfo';
+import { computeVideoFx, PostFX, signalQuality } from './render/postfx';
+import { PropWashEffects } from './render/propwash';
+import { CollisionWorld } from './sim/collision';
+import { FlightController } from './sim/flightController';
+import { getPreset } from './sim/presets';
+import { Quad, type QuadView } from './sim/quad';
+import { buildMap, type MapInfo } from './world/map';
+import { buildQuadModel, type QuadModel } from './world/quadModel';
 
-const DT = 1 / 1000; // physics + PID loop: 1 kHz
+export const DT = 1 / 1000; // physics + PID loop: 1 kHz
 const MAX_STEPS_PER_FRAME = 120;
-const VTX_RANGE = { 25: 250, 200: 650, 600: 1100, 1000: 1600 }; // metres of clean video, roughly
 
-const config = loadConfig();
-
-// ── Renderer & scene ──────────────────────────────────────────────────────
-const canvas = document.getElementById('view');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: config.graphics.antialias, powerPreference: 'high-performance' });
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-const scene = new THREE.Scene();
-const gpu = detectGpu(renderer);
-gpu.label = gpuLabel(gpu);
-console.info(`[agenticFPV] GPU: ${gpu.name} (${gpu.vendor}) — ${gpu.software ? 'SOFTWARE' : 'hardware'} rendering`);
-const env = new Environment(renderer, scene);
-const post = new PostFX(renderer);
-
-// ── World ─────────────────────────────────────────────────────────────────
-const collision = new CollisionWorld();
-const loadingEl = document.getElementById('loading');
-const map = await buildMap(scene, collision, renderer, (msg) => (loadingEl.textContent = msg));
-const spawn = map.spawn;
-if (map.lamps) env.setLamps(map.lamps.positions, map.lamps.meshes);
-const effects = new PropWashEffects(scene, collision, map.grassPatches);
-
-// ── Quad model ───────────────────────────────────────────────────────────
-let quadModel = null;
-function rebuildQuadModel() {
-  if (quadModel) scene.remove(quadModel);
-  const preset = QUAD_PRESETS[config.quad.preset] || QUAD_PRESETS.freestyle5;
-  quadModel = buildQuadModel(preset, config.physics, { cameraTilt: config.camera.tilt });
-  scene.add(quadModel);
-}
-rebuildQuadModel();
-
-// ── Sim ───────────────────────────────────────────────────────────────────
-const fc = new FlightController(config, DT);
-const quad = new Quad(config);
-quad.noiseScale = config.filters.gyroNoise;
-const input = new InputManager(config);
-const osd = new OSD(document.getElementById('osd'), document.getElementById('sticks'), document.getElementById('blackbox'));
-const audio = new MotorAudio(config);
-const replay = new Replay(90, 60);
-const camera = new THREE.PerspectiveCamera(90, 1, 0.02, 2000);
-const chasePos = new THREE.Vector3();
-const pilotPos = spawn.pos.clone().add(new THREE.Vector3(0, 1.7, 4));
-
-// ── UI helpers ────────────────────────────────────────────────────────────
-const toastEl = document.getElementById('toast');
-let toastTimer = 0;
-function toast(msg, ms = 2500) {
-  toastEl.textContent = msg;
-  toastEl.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
+export interface SimState {
+  armed: boolean;
+  crashed: boolean;
+  turtle: boolean;
+  flightTime: number;
+  warning: string;
+  signal: number;
+  occluders: number;
+  simTime: number;
 }
 
-const game = new Game({ scene, config, spawn, toast, resultsEl: document.getElementById('results') });
-
-const state = { armed: false, crashed: false, turtle: false, flightTime: 0, warning: '', signal: 1, occluders: 0, simTime: 0 };
-const prevPos = new THREE.Vector3();
-
-function resetQuad() {
-  quad.reset(spawn.pos, spawn.yaw);
-  fc.reset();
-  state.armed = false;
-  fc.armed = false;
-  state.crashed = false;
-  state.turtle = false;
-  state.flightTime = 0;
-  prevPos.copy(quad.pos);
-  chasePos.copy(quad.pos).add(new THREE.Vector3(0, 1, 3));
-  game.reset();
-  if (replay.active) replay.exit();
-}
-resetQuad();
-
-function applyConfig() {
-  fc.applyConfig(config);
-  quad.applyConfig(config);
-  quad.noiseScale = config.filters.gyroNoise;
-  renderer.shadowMap.enabled = config.graphics.shadows;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * config.graphics.pixelRatio);
-  onResize();
-}
-function applyEnvironment() {
-  return env.apply(config.graphics.timeOfDay, { fog: config.graphics.fog, shadows: config.graphics.shadows, ibl: config.graphics.ibl });
+export interface PerfStats {
+  frameMs: number;
+  physMs: number;
+  renderMs: number;
+  steps: number;
 }
 
-const menu = new SettingsMenu(document.getElementById('menu'), config, {
-  input,
-  game,
-  onChange: (path) => {
-    applyConfig();
-    if (path === 'graphics.shadows') scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; });
-    if (path.startsWith('graphics') || path === 'all') applyEnvironment();
-    if (path === 'quad.preset' || path === 'all' || path.startsWith('physics.armLength') || path.startsWith('physics.prop') || path === 'camera.tilt') rebuildQuadModel();
-    if (path === 'quad.preset' || path.startsWith('game.')) resetQuad();
-  },
-  onClose: () => { lastTime = performance.now(); },
-});
-menu.onToast = toast;
-menu.gpu = gpu;
+/** What the HUD needs each frame. */
+export interface Hud {
+  lap: string;
+  bigCountdown: boolean;
+  warning: string;
+}
 
-// ── Input bindings ────────────────────────────────────────────────────────
-const CAMERA_MODES = ['fpv', 'chase', 'los', 'orbit'];
-input.on('menu', () => menu.toggle());
-input.on('reset', () => resetQuad());
-input.on('camera', () => {
-  config.camera.mode = CAMERA_MODES[(CAMERA_MODES.indexOf(config.camera.mode) + 1) % CAMERA_MODES.length];
-  toast(`Camera: ${config.camera.mode.toUpperCase()}`, 1200);
-});
-input.on('mode', () => {
-  config.flight.mode = config.flight.mode === 'acro' ? 'angle' : 'acro';
-  toast(`Flight mode: ${config.flight.mode.toUpperCase()}`, 1200);
-});
-input.on('help', () => menu.open('help'));
-input.onChange = () => {
-  const pad = input.getGamepad();
-  toast(pad ? `Controller connected: ${pad.id}` : 'Controller disconnected — keyboard fallback', 3000);
-  if (menu.isOpen) menu.render();
-};
-input.keyHook = (k, e) => {
-  if (menu.isOpen) return false;
-  if (k === 'p' && !e.repeat) {
-    if (replay.active) {
-      replay.exit();
-      toast('Replay closed', 1000);
-    } else if (replay.enter()) {
-      game.resultsEl.classList.add('hidden');
-      toast('Replay', 1000);
+export type FrameListener = (sim: Simulator) => void;
+
+const ema = (prev: number, v: number, k = 0.1) => (prev === 0 ? v : prev + (v - prev) * k);
+
+export class Simulator {
+  readonly renderer: THREE.WebGLRenderer;
+  readonly scene: THREE.Scene;
+  readonly camera = new THREE.PerspectiveCamera(90, 1, 0.02, 2000);
+  readonly collision: CollisionWorld;
+  readonly gpu: GpuInfo;
+  readonly env: Environment;
+  readonly post: PostFX;
+  readonly map: MapInfo;
+  readonly effects: PropWashEffects;
+  readonly fc: FlightController;
+  readonly quad: Quad;
+  readonly input: InputManager;
+  readonly audio: MotorAudio;
+  readonly replay = new Replay(90, 60);
+  readonly game: Game;
+  readonly state: SimState = {
+    armed: false,
+    crashed: false,
+    turtle: false,
+    flightTime: 0,
+    warning: '',
+    signal: 1,
+    occluders: 0,
+    simTime: 0,
+  };
+  readonly perf: PerfStats = { frameMs: 0, physMs: 0, renderMs: 0, steps: 0 };
+  readonly hud: Hud = { lap: '', bigCountdown: false, warning: '' };
+  quadModel!: QuadModel;
+  rc: InputState;
+
+  private readonly pilotPos: THREE.Vector3;
+  private readonly prevPos = new THREE.Vector3();
+  private readonly chasePos = new THREE.Vector3();
+  private readonly listeners = new Set<FrameListener>();
+  private readonly cleanups: (() => void)[] = [];
+  private lastTime = performance.now();
+  private accumulator = 0;
+  private signalTimer = 0;
+  private raf = 0;
+  private readonly tiltQ = new THREE.Quaternion();
+  private readonly tmpV = new THREE.Vector3();
+
+  /** Build the world (async: textures, HDRIs) and return a ready, not-yet-running simulator. */
+  static async create(canvas: HTMLCanvasElement): Promise<Simulator> {
+    const ui = useUiStore.getState();
+    const config = getConfig();
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: config.graphics.antialias, powerPreference: 'high-performance' });
+    const scene = new THREE.Scene();
+    const collision = new CollisionWorld();
+    const map = await buildMap(scene, collision, (msg) => ui.setLoading(msg));
+    const sim = new Simulator(renderer, scene, collision, map);
+    await sim.applyEnvironment();
+    return sim;
+  }
+
+  private constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, collision: CollisionWorld, map: MapInfo) {
+    const config = getConfig();
+    this.renderer = renderer;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.scene = scene;
+    this.collision = collision;
+    this.map = map;
+    this.gpu = detectGpu(renderer);
+    console.info(`[agenticFPV] GPU: ${this.gpu.name} (${this.gpu.vendor}) — ${this.gpu.software ? 'SOFTWARE' : 'hardware'} rendering`);
+    useUiStore.getState().setGpu(this.gpu);
+
+    this.env = new Environment(renderer, scene);
+    this.env.setLamps(map.lamps.positions, map.lamps.meshes);
+    this.post = new PostFX(renderer);
+    this.effects = new PropWashEffects(scene, collision, map.grassPatches);
+    this.pilotPos = map.spawn.pos.clone().add(new THREE.Vector3(0, 1.7, 4));
+
+    this.fc = new FlightController(config, DT);
+    this.quad = new Quad(config);
+    this.input = new InputManager(config);
+    this.rc = this.input.state;
+    this.audio = new MotorAudio(config);
+    this.game = new Game({
+      scene,
+      getConfig,
+      updateConfig: (recipe) => useConfigStore.getState().update(recipe),
+      toast: (msg, ms) => useUiStore.getState().toast(msg, ms),
+      onRaceFinished: (r) => useUiStore.getState().setResults(r),
+    });
+    this.rebuildQuadModel();
+    this.bindInput();
+    this.resetQuad();
+    this.applyConfig(config, null);
+
+    // React to config edits (settings UI, imports, key toggles).
+    this.cleanups.push(useConfigStore.subscribe((s) => s.config, (cfg, prev) => this.applyConfig(cfg, prev)));
+    const onResize = () => this.resize();
+    window.addEventListener('resize', onResize);
+    this.cleanups.push(() => window.removeEventListener('resize', onResize));
+    this.resize();
+  }
+
+  get config(): Config {
+    return getConfig();
+  }
+
+  /** The thing we look at / listen to: the live quad or the replay proxy. */
+  get subject(): QuadView {
+    return this.replay.active ? this.replay.view : this.quad;
+  }
+
+  get paused(): boolean {
+    return useUiStore.getState().menuOpen || this.replay.active;
+  }
+
+  // ── Lifecycle ───────────────────────────────────────────────────────────────
+  start(): void {
+    this.lastTime = performance.now();
+    const loop = (now: number) => {
+      this.raf = requestAnimationFrame(loop);
+      this.frame(now);
+    };
+    this.raf = requestAnimationFrame(loop);
+  }
+
+  dispose(): void {
+    cancelAnimationFrame(this.raf);
+    this.cleanups.forEach((f) => f());
+    this.input.dispose();
+    this.audio.dispose();
+    this.renderer.dispose();
+  }
+
+  onFrame(fn: FrameListener): () => void {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  // ── Config ──────────────────────────────────────────────────────────────────
+  private applyConfig(cfg: Config, prev: Config | null): void {
+    this.fc.applyConfig(cfg);
+    this.quad.applyConfig(cfg);
+    this.input.config = cfg;
+    this.audio.config = cfg;
+    const changed = <K extends keyof Config>(k: K) => !prev || prev[k] !== cfg[k];
+    if (changed('graphics')) {
+      this.renderer.shadowMap.enabled = cfg.graphics.shadows;
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * cfg.graphics.pixelRatio);
+      if (prev && prev.graphics.shadows !== cfg.graphics.shadows) {
+        this.scene.traverse((o) => {
+          const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+          if (m) m.needsUpdate = true;
+        });
+      }
+      if (prev) void this.applyEnvironment();
+      this.resize();
     }
-    return true;
+    if (!prev) return;
+    const modelChanged =
+      prev.quad.preset !== cfg.quad.preset ||
+      prev.physics.armLengthMm !== cfg.physics.armLengthMm ||
+      prev.physics.propInches !== cfg.physics.propInches ||
+      prev.physics.cells !== cfg.physics.cells ||
+      prev.camera.tilt !== cfg.camera.tilt;
+    if (modelChanged) this.rebuildQuadModel();
+    if (prev.quad.preset !== cfg.quad.preset || prev.game.laps !== cfg.game.laps || prev.game.gatesInFree !== cfg.game.gatesInFree) {
+      if (prev.game.gatesInFree !== cfg.game.gatesInFree) this.game.rebuildGates();
+      this.resetQuad();
+    }
   }
-  if (replay.active) {
-    if (k === ' ') replay.playing = !replay.playing;
-    else if (k === 'arrowleft') replay.seek(-5);
-    else if (k === 'arrowright') replay.seek(5);
-    else if (k === 'arrowup') replay.speed = Math.min(4, replay.speed * 2);
-    else if (k === 'arrowdown') replay.speed = Math.max(0.125, replay.speed / 2);
-    else if (k === 'c') return false;
-    else return k !== 'escape' && k !== 'r';
-    return true;
-  }
-  if (game.mode === 'editor') {
-    if (k === 'g' && !e.repeat) { game.placeGate(quad); return true; }
-    if (k === 'backspace') { game.removeLastGate(); return true; }
-  }
-  if (k === 'b' && !e.repeat) { osd.toggleBlackbox(); return true; }
-  if (k === 'f' && !e.repeat) {
-    config.camera.showPerf = !config.camera.showPerf;
-    saveConfig(config);
-    return true;
-  }
-  return false;
-};
 
-function onResize() {
-  const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h, false);
-  post.setSize(w, h, renderer.getPixelRatio());
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', onResize);
-applyConfig();
-await applyEnvironment();
-
-// ── Per-frame logic ───────────────────────────────────────────────────────
-const collide = (q) => {
-  collision.resolveQuad(q, config.physics);
-  if (game.mode !== 'editor') game.gateWorld.resolveQuad(q, config.physics);
-};
-const tiltQ = new THREE.Quaternion();
-const X_AXIS = new THREE.Vector3(1, 0, 0);
-const tmpV = new THREE.Vector3();
-let lastTime = performance.now();
-let accumulator = 0;
-let signalTimer = 0;
-
-function updateArming(rc) {
-  const wantArm = rc.armSwitch && !state.crashed && game.allowArm;
-  if (!wantArm) {
-    state.armed = false;
-  } else if (!state.armed && rc.throttle < 0.05) {
-    state.armed = true;
-    state.turtle = !!rc.turtleSwitch; // latched at arming, like Betaflight
+  applyEnvironment(): Promise<void> {
+    const g = this.config.graphics;
+    return this.env.apply(g.timeOfDay, { fog: g.fog, shadows: g.shadows, ibl: g.ibl });
   }
-  if (!state.armed) state.turtle = false;
-  fc.armed = state.armed;
-  fc.turtle = state.turtle;
-  if (state.crashed) state.warning = 'CRASHED · PRESS R';
-  else if (state.turtle) state.warning = 'TURTLE';
-  else if (rc.armSwitch && !state.armed && game.allowArm) state.warning = 'THROTTLE HIGH';
-  else state.warning = quad.battery.voltage / config.physics.cells < 3.4 && config.physics.battery ? 'LOW BATTERY' : '';
-}
 
-function updateSignal(dt, subject) {
-  signalTimer -= dt;
-  if (signalTimer <= 0) {
-    signalTimer = 0.1;
-    state.occluders = collision.countOccluders(pilotPos, subject.pos, 6);
+  rebuildQuadModel(): void {
+    if (this.quadModel) this.scene.remove(this.quadModel);
+    const cfg = this.config;
+    this.quadModel = buildQuadModel(getPreset(cfg.quad.preset), cfg.physics, { cameraTilt: cfg.camera.tilt });
+    this.scene.add(this.quadModel);
   }
-  const v = config.video;
-  const range = VTX_RANGE[v.vtxPower] ?? 650;
-  const d = pilotPos.distanceTo(subject.pos);
-  const perWall = v.system === 'digital' ? 0.13 : 0.17;
-  const q = 1 - Math.pow(d / range, 2) - state.occluders * perWall;
-  state.signal += (Math.max(0, Math.min(1, q)) - state.signal) * Math.min(1, dt * 6);
-}
 
-function videoFx(t) {
-  const v = config.video;
-  const fpv = config.camera.mode === 'fpv';
-  if (!fpv || v.system === 'clean') {
-    return { enabled: fpv && (v.fisheye > 0 || v.vignette > 0), fisheye: v.fisheye, chroma: v.chroma * 0.5, vignette: v.vignette, digital: 1 };
+  private resize(): void {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    this.renderer.setSize(w, h, false);
+    this.post.setSize(w, h, this.renderer.getPixelRatio());
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
   }
-  const s = state.signal;
-  if (v.system === 'digital') {
-    const bad = Math.max(0, (0.3 - s) / 0.3);
-    const lost = s < 0.06;
-    return {
-      enabled: true, fisheye: v.fisheye, chroma: v.chroma * 0.4, vignette: v.vignette, digital: 1,
-      pixelate: bad > 0 ? 1 + bad * 22 : 0, freeze: lost || (bad > 0.5 && Math.sin(t * 9) > 0.2),
+
+  // ── Actions (keyboard, UI) ──────────────────────────────────────────────────
+  resetQuad(): void {
+    this.quad.reset(this.map.spawn.pos, this.map.spawn.yaw);
+    this.fc.reset();
+    Object.assign(this.state, { armed: false, crashed: false, turtle: false, flightTime: 0 });
+    this.fc.armed = false;
+    this.prevPos.copy(this.quad.pos);
+    this.chasePos.copy(this.quad.pos).add(new THREE.Vector3(0, 1, 3));
+    this.game.reset();
+    useUiStore.getState().setResults(null);
+    if (this.replay.active) this.replay.exit();
+  }
+
+  setGameMode(mode: GameMode): void {
+    this.game.setMode(mode);
+    this.resetQuad();
+  }
+
+  loadTrack(id: string): void {
+    this.game.loadTrack(id);
+    this.resetQuad();
+  }
+
+  cycleCamera(): void {
+    const mode = this.config.camera.mode;
+    const next = CAMERA_MODES[(CAMERA_MODES.indexOf(mode) + 1) % CAMERA_MODES.length];
+    useConfigStore.getState().setPath('camera.mode', next);
+    useUiStore.getState().toast(`Camera: ${next.toUpperCase()}`, 1200);
+  }
+
+  toggleFlightMode(): void {
+    const next = this.config.flight.mode === 'acro' ? 'angle' : 'acro';
+    useConfigStore.getState().setPath('flight.mode', next);
+    useUiStore.getState().toast(`Flight mode: ${next.toUpperCase()}`, 1200);
+  }
+
+  toggleReplay(): void {
+    const ui = useUiStore.getState();
+    if (this.replay.active) {
+      this.replay.exit();
+      ui.toast('Replay closed', 1000);
+    } else if (this.replay.enter()) {
+      ui.setResults(null);
+      ui.toast('Replay', 1000);
+    }
+  }
+
+  private bindInput(): void {
+    const ui = () => useUiStore.getState();
+    const i = this.input;
+    this.cleanups.push(
+      i.on('menu', () => ui().toggleMenu()),
+      i.on('reset', () => this.resetQuad()),
+      i.on('camera', () => this.cycleCamera()),
+      i.on('mode', () => this.toggleFlightMode()),
+      i.on('help', () => ui().openMenu('help')),
+      i.on('gamepads', () => {
+        const pad = i.getGamepad();
+        ui().toast(pad ? `Controller connected: ${pad.id}` : 'Controller disconnected — keyboard fallback', 3000);
+      }),
+    );
+    i.keyHook = (k, e) => {
+      if (ui().menuOpen) return false;
+      const r = this.replay;
+      if (k === 'p' && !e.repeat) {
+        this.toggleReplay();
+        return true;
+      }
+      if (r.active) {
+        if (k === ' ') r.playing = !r.playing;
+        else if (k === 'arrowleft') r.seek(-5);
+        else if (k === 'arrowright') r.seek(5);
+        else if (k === 'arrowup') r.setSpeed(r.speed * 2);
+        else if (k === 'arrowdown') r.setSpeed(r.speed / 2);
+        else if (k === 'c') return false;
+        else return k !== 'escape' && k !== 'r';
+        return true;
+      }
+      if (this.game.mode === 'editor') {
+        if (k === 'g' && !e.repeat) {
+          this.game.placeGate(this.quad);
+          return true;
+        }
+        if (k === 'backspace') {
+          this.game.removeLastGate();
+          return true;
+        }
+      }
+      if (k === 'b' && !e.repeat) {
+        ui().toggleBlackbox();
+        return true;
+      }
+      if (k === 'f' && !e.repeat) {
+        useConfigStore.getState().setPath('camera.showPerf', !this.config.camera.showPerf);
+        return true;
+      }
+      return false;
     };
   }
-  const noise = Math.pow(1 - s, 2.2) * v.staticAmount;
-  return {
-    enabled: true, fisheye: v.fisheye, chroma: v.chroma, vignette: v.vignette, digital: 0, scanlines: v.scanlines,
-    staticAmt: Math.min(1, 0.04 * v.staticAmount + noise), breakup: s < 0.35 ? ((0.35 - s) / 0.35) * v.staticAmount : 0,
+
+  // ── Per-frame ───────────────────────────────────────────────────────────────
+  private collide = (q: Quad) => {
+    const p = this.config.physics;
+    this.collision.resolveQuad(q, p);
+    if (this.game.mode !== 'editor') this.game.gateWorld.resolveQuad(q, p);
   };
-}
 
-function updateCamera(frameDt, subject) {
-  const mode = config.camera.mode;
-  const size = Math.max(0.3, config.physics.armLengthMm / 112);
-  if (mode === 'fpv') {
-    const hfov = THREE.MathUtils.degToRad(config.camera.fov);
-    camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / camera.aspect));
-    tiltQ.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(config.camera.tilt));
-    camera.quaternion.copy(subject.quat).multiply(tiltQ);
-    const s = config.physics.armLengthMm / 112;
-    camera.position.copy(subject.pos).add(tmpV.set(0, 0.03 * s, -0.06 * s).applyQuaternion(subject.quat));
-    quadModel.visible = false;
-  } else if (mode === 'chase') {
-    camera.fov = 75;
-    const fwd = tmpV.set(0, 0, -1).applyQuaternion(subject.quat);
-    fwd.y = 0;
-    if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
-    fwd.normalize();
-    const desired = subject.pos.clone().addScaledVector(fwd, -2.4 * size).add(new THREE.Vector3(0, 0.9 * size, 0));
-    chasePos.lerp(desired, 1 - Math.exp(-frameDt * 8));
-    camera.position.copy(chasePos);
-    camera.lookAt(subject.pos);
-    quadModel.visible = true;
-  } else if (mode === 'orbit') {
-    const t = performance.now() / 4000;
-    camera.fov = 45;
-    camera.position.set(subject.pos.x + Math.cos(t) * 0.6 * size, subject.pos.y + 0.22 * size, subject.pos.z + Math.sin(t) * 0.6 * size);
-    camera.lookAt(subject.pos);
-    quadModel.visible = true;
-  } else {
-    camera.position.copy(pilotPos);
-    camera.fov = Math.max(8, Math.min(60, 600 / Math.max(5, camera.position.distanceTo(subject.pos))));
-    camera.lookAt(subject.pos);
-    quadModel.visible = true;
-  }
-  camera.updateProjectionMatrix();
-}
-
-// Exponentially smoothed timings for the performance readout (F).
-const perf = { frameMs: 0, physMs: 0, renderMs: 0, steps: 0 };
-const ema = (prev, v, k = 0.1) => (prev === 0 ? v : prev + (v - prev) * k);
-function perfText() {
-  return `${(1000 / Math.max(1e-3, perf.frameMs)).toFixed(0)} FPS  ${perf.frameMs.toFixed(1)}ms\nPHYS ${perf.physMs.toFixed(2)}ms (${perf.steps} steps)\nRENDER CPU ${perf.renderMs.toFixed(2)}ms\n${gpu.software ? 'SOFTWARE GL' : gpu.label.slice(0, 28).toUpperCase()}`;
-}
-
-function frame(now) {
-  requestAnimationFrame(frame);
-  const frameStart = lastTime;
-  const frameDt = Math.min(0.1, (now - lastTime) / 1000);
-  lastTime = now;
-  const rc = input.poll(frameDt);
-  if (rc.angleSwitch !== null) config.flight.mode = rc.angleSwitch ? 'angle' : 'acro';
-  const paused = menu.isOpen || replay.active;
-
-  if (!paused) {
-    updateArming(rc);
-    accumulator += frameDt;
-    let steps = 0;
-    const physStart = performance.now();
-    while (accumulator >= DT && steps < MAX_STEPS_PER_FRAME) {
-      quad.step(DT, fc.update(rc, quad.gyro, quad.attitude), collide);
-      accumulator -= DT;
-      steps++;
+  private updateArming(rc: InputState): void {
+    const s = this.state;
+    const cfg = this.config;
+    const wantArm = rc.armSwitch && !s.crashed && this.game.allowArm;
+    if (!wantArm) {
+      s.armed = false;
+    } else if (!s.armed && rc.throttle < 0.05) {
+      s.armed = true;
+      s.turtle = rc.turtleSwitch; // latched at arming, like Betaflight
     }
-    if (steps >= MAX_STEPS_PER_FRAME) accumulator = 0;
-    perf.physMs = ema(perf.physMs, performance.now() - physStart);
-    perf.steps = steps;
-    state.simTime += frameDt;
-    if (state.armed) state.flightTime += frameDt;
-    if (config.physics.crashEnabled && quad.lastImpact > config.physics.crashSpeed) {
-      state.crashed = true;
-      state.armed = false;
-      fc.armed = false;
-    }
-    if (quad.lastImpact > 0.8) audio.impact(quad.lastImpact);
-    if (quad.lastImpact > 2.5) effects.impact(quad.pos, quad.lastImpact);
-    quad.lastImpact = 0;
-    game.update(frameDt, quad, prevPos, rc);
-    prevPos.copy(quad.pos);
-    replay.record(state.simTime, quad);
+    if (!s.armed) s.turtle = false;
+    this.fc.armed = s.armed;
+    this.fc.turtle = s.turtle;
+    if (s.crashed) s.warning = 'CRASHED · PRESS R';
+    else if (s.turtle) s.warning = 'TURTLE';
+    else if (rc.armSwitch && !s.armed && this.game.allowArm) s.warning = 'THROTTLE HIGH';
+    else s.warning = cfg.physics.battery && this.quad.battery.voltage / cfg.physics.cells < 3.4 ? 'LOW BATTERY' : '';
   }
-  replay.update(frameDt);
-  menu.update();
 
-  // The thing we look at / listen to: live quad, or the replay proxy.
-  const subject = replay.active ? replay.view : quad;
-  quadModel.position.copy(subject.pos);
-  quadModel.quaternion.copy(subject.quat);
-  quadModel.userData.update(subject.motorSpeed, replay.active ? frameDt * replay.speed * (replay.playing ? 1 : 0) : frameDt);
-  updateCamera(frameDt, subject);
-  env.update(subject.pos, camera.position);
-  updateSignal(frameDt, subject);
-  effects.enabled = config.graphics.effects;
-  effects.update(paused && !replay.active ? 0 : frameDt * (replay.active ? replay.speed * (replay.playing ? 1 : 0) : 1), subject, config.physics, camera, env.fxLight, quad.wind);
-  const preset = QUAD_PRESETS[config.quad.preset] || QUAD_PRESETS.freestyle5;
-  audio.update(subject, config.camera.mode === 'fpv' ? 0 : camera.position.distanceTo(subject.pos), menu.isOpen || (replay.active && !replay.playing), preset.model.blades);
+  private updateSignal(dt: number, subject: QuadView): void {
+    this.signalTimer -= dt;
+    if (this.signalTimer <= 0) {
+      this.signalTimer = 0.1;
+      this.state.occluders = this.collision.countOccluders(this.pilotPos, subject.pos, 6);
+    }
+    const q = signalQuality(this.pilotPos.distanceTo(subject.pos), this.state.occluders, this.config.video);
+    this.state.signal += (q - this.state.signal) * Math.min(1, dt * 6);
+  }
 
-  const lapText = replay.active ? replay.label() : game.osdText(camera);
-  osd.update({
-    config, quad, fc, rc, armed: state.armed, flightTime: state.flightTime, warning: replay.active ? '' : state.warning,
-    lap: lapText, signal: state.signal, perf: config.camera.showPerf ? perfText() : '', big: game.mode === 'race' && game.phase === 'countdown' && !replay.active,
-  });
-  const renderStart = performance.now();
-  post.render(scene, camera, videoFx(now / 1000), now / 1000);
-  perf.renderMs = ema(perf.renderMs, performance.now() - renderStart);
-  perf.frameMs = ema(perf.frameMs, (now - frameStart) || frameDt * 1000);
+  private updateCamera(frameDt: number, subject: QuadView): void {
+    const cfg = this.config;
+    const cam = this.camera;
+    const mode = cfg.camera.mode;
+    const size = Math.max(0.3, cfg.physics.armLengthMm / 112);
+    if (mode === 'fpv') {
+      const hfov = THREE.MathUtils.degToRad(cfg.camera.fov);
+      cam.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / cam.aspect));
+      this.tiltQ.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(cfg.camera.tilt));
+      cam.quaternion.copy(subject.quat).multiply(this.tiltQ);
+      const s = cfg.physics.armLengthMm / 112;
+      cam.position.copy(subject.pos).add(this.tmpV.set(0, 0.03 * s, -0.06 * s).applyQuaternion(subject.quat));
+    } else if (mode === 'chase') {
+      cam.fov = 75;
+      const fwd = this.tmpV.set(0, 0, -1).applyQuaternion(subject.quat);
+      fwd.y = 0;
+      if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
+      fwd.normalize();
+      const desired = subject.pos.clone().addScaledVector(fwd, -2.4 * size).add(new THREE.Vector3(0, 0.9 * size, 0));
+      this.chasePos.lerp(desired, 1 - Math.exp(-frameDt * 8));
+      cam.position.copy(this.chasePos);
+      cam.lookAt(subject.pos);
+    } else if (mode === 'orbit') {
+      const t = performance.now() / 4000;
+      cam.fov = 45;
+      cam.position.set(subject.pos.x + Math.cos(t) * 0.6 * size, subject.pos.y + 0.22 * size, subject.pos.z + Math.sin(t) * 0.6 * size);
+      cam.lookAt(subject.pos);
+    } else {
+      cam.position.copy(this.pilotPos);
+      cam.fov = Math.max(8, Math.min(60, 600 / Math.max(5, cam.position.distanceTo(subject.pos))));
+      cam.lookAt(subject.pos);
+    }
+    this.quadModel.visible = mode !== 'fpv';
+    cam.updateProjectionMatrix();
+  }
+
+  private frame(now: number): void {
+    const cfg = this.config;
+    const frameStart = this.lastTime;
+    const frameDt = Math.min(0.1, (now - this.lastTime) / 1000);
+    this.lastTime = now;
+    const rc = (this.rc = this.input.poll(frameDt));
+    if (rc.angleSwitch !== null) {
+      const mode = rc.angleSwitch ? 'angle' : 'acro';
+      if (mode !== cfg.flight.mode) useConfigStore.getState().setPath('flight.mode', mode);
+    }
+    const menuOpen = useUiStore.getState().menuOpen;
+    const replay = this.replay;
+    const paused = menuOpen || replay.active;
+    const s = this.state;
+
+    if (!paused) {
+      this.updateArming(rc);
+      this.accumulator += frameDt;
+      let steps = 0;
+      const physStart = performance.now();
+      while (this.accumulator >= DT && steps < MAX_STEPS_PER_FRAME) {
+        this.quad.step(DT, this.fc.update(rc, this.quad.gyro, this.quad.attitude), this.collide);
+        this.accumulator -= DT;
+        steps++;
+      }
+      if (steps >= MAX_STEPS_PER_FRAME) this.accumulator = 0;
+      this.perf.physMs = ema(this.perf.physMs, performance.now() - physStart);
+      this.perf.steps = steps;
+      s.simTime += frameDt;
+      if (s.armed) s.flightTime += frameDt;
+      const impact = this.quad.lastImpact;
+      if (cfg.physics.crashEnabled && impact > cfg.physics.crashSpeed) {
+        s.crashed = true;
+        s.armed = false;
+        this.fc.armed = false;
+      }
+      if (impact > 0.8) this.audio.impact(impact);
+      if (impact > 2.5) this.effects.impact(this.quad.pos, impact);
+      this.quad.lastImpact = 0;
+      this.game.update(frameDt, this.quad, this.prevPos, rc);
+      this.prevPos.copy(this.quad.pos);
+      replay.record(s.simTime, this.quad);
+    }
+    replay.update(frameDt);
+
+    const subject = this.subject;
+    const replayRate = replay.active ? replay.speed * (replay.playing ? 1 : 0) : 1;
+    this.quadModel.position.copy(subject.pos);
+    this.quadModel.quaternion.copy(subject.quat);
+    this.quadModel.update(subject.motorSpeed, frameDt * replayRate);
+    this.updateCamera(frameDt, subject);
+    this.env.update(subject.pos, this.camera.position);
+    this.updateSignal(frameDt, subject);
+    this.effects.enabled = cfg.graphics.effects;
+    this.effects.update(
+      menuOpen && !replay.active ? 0 : frameDt * replayRate,
+      subject,
+      cfg.physics,
+      this.camera,
+      this.env.fxLight,
+      this.quad.wind,
+    );
+    const listenerDist = cfg.camera.mode === 'fpv' ? 0 : this.camera.position.distanceTo(subject.pos);
+    this.audio.update(subject, listenerDist, menuOpen || (replay.active && !replay.playing), getPreset(cfg.quad.preset).model.blades);
+
+    this.hud.lap = replay.active ? replay.label() : this.game.osdText(this.camera);
+    this.hud.bigCountdown = !replay.active && this.game.session.phase === 'countdown';
+    this.hud.warning = replay.active ? '' : s.warning;
+    this.listeners.forEach((fn) => fn(this));
+
+    const renderStart = performance.now();
+    this.post.render(this.scene, this.camera, computeVideoFx(cfg.video, cfg.camera.mode, s.signal, now / 1000), now / 1000);
+    this.perf.renderMs = ema(this.perf.renderMs, performance.now() - renderStart);
+    this.perf.frameMs = ema(this.perf.frameMs, now - frameStart || frameDt * 1000);
+  }
 }
-
-loadingEl.classList.add('done');
-if (gpu.software) {
-  const w = document.getElementById('gpuwarn');
-  w.innerHTML = `<b>Hardware acceleration is off.</b> Your browser is rendering with <code>${gpu.name.replace(/[<>&]/g, '')}</code> (software),
-    so the sim will be slow. Enable it in Chrome/Edge: <i>Settings → System → Use graphics acceleration when available</i>, then restart.
-    Check <code>chrome://gpu</code> shows "WebGL: Hardware accelerated". On laptops, set the browser to the high-performance GPU.
-    <button class="btn">Dismiss</button>`;
-  w.classList.remove('hidden');
-  w.querySelector('button').addEventListener('click', () => w.classList.add('hidden'));
-}
-toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · P = replay · H = help', 6000);
-requestAnimationFrame(frame);
-
-// Expose for debugging / automated smoke tests.
-window.__fpv = {
-  audio, effects, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, renderer, gpu, perf, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad, textureSource: map.textureSource,
-  get quadModel() { return quadModel; },
-};
