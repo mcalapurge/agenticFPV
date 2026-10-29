@@ -4,7 +4,7 @@ test('track editor: place, undo, save and reload a custom track', async ({ app }
   await openMenu(app);
   await app.getByRole('button', { name: /^Track editor/ }).click();
   await app.getByRole('button', { name: 'Clear gates' }).click();
-  await expect(app.getByText('0 gates')).toBeVisible();
+  await expect(app.getByText('0 gates', { exact: true })).toBeVisible();
   await closeMenu(app);
 
   for (const [x, z] of [
@@ -22,7 +22,7 @@ test('track editor: place, undo, save and reload a custom track', async ({ app }
   await expect(app.getByRole('status')).toContainText('Gate removed (3 left)');
 
   await app.keyboard.press('Escape');
-  await expect(app.getByText('3 gates')).toBeVisible();
+  await expect(app.getByText('3 gates', { exact: true })).toBeVisible();
   await app.getByLabel('Track name').fill('E2E Loop');
   await app.getByRole('button', { name: 'Save track' }).click();
   await expect(app.getByRole('status')).toContainText('Track “E2E Loop” saved');
