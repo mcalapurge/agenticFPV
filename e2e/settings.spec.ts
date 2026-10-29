@@ -46,7 +46,7 @@ test('rates tab updates the max rate and keeps the graph live', async ({ app }) 
 
 test('reset tab restores defaults for that tab only', async ({ app }) => {
   await app.getByRole('tab', { name: 'Physics' }).click();
-  await app.getByLabel(/^All-up weight/).fill('900');
+  await app.getByRole('spinbutton', { name: 'All-up weight (g)' }).fill('900');
   await app.getByRole('tab', { name: 'PIDs' }).click();
   await app.getByLabel('yaw p').fill('70');
   await app.getByRole('button', { name: 'Reset tab to defaults' }).click();
