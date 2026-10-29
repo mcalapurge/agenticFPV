@@ -1,5 +1,7 @@
 # agenticFPV
 
+![FPV view at golden hour: lining up a race gate at the warehouse door, Betaflight-style OSD](docs/screenshots/hero-fpv-golden-hour.jpg)
+
 A browser-based FPV drone simulator in the spirit of Velocidrone and Liftoff. It has:
 
 - A Betaflight-style flight controller.
@@ -10,6 +12,32 @@ A browser-based FPV drone simulator in the spirit of Velocidrone and Liftoff. It
 - An abandoned-industrial map.
 
 It's built on Three.js, and everything works with no downloaded assets.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Inside the roofless warehouse on the Warehouse Sprint track, analog video](docs/screenshots/warehouse-run-analog.jpg) | ![Threading the floor-2 gate of the concrete skeleton, overcast](docs/screenshots/skeleton-floor-gate.jpg) |
+| **Warehouse Sprint**: through the collapsed roof, analog link | **Works Circuit**: skeleton floor-2 gate, overcast |
+| ![Hovering off the tower roof at dusk, eyeing the dive gate below](docs/screenshots/tower-dive-dusk.jpg) | ![Night flying under the street lamps](docs/screenshots/night-street-lamps.jpg) |
+| **Tower Dive**: dusk, dive gate below | **Night**: street lamps and stars |
+| ![Analog video breaking up behind buildings](docs/screenshots/analog-signal-breakup.jpg) | ![Race results card with holeshot, laps and leaderboard](docs/screenshots/race-results.jpg) |
+| **Analog breakup** at range and behind walls | **Race mode**: results and local leaderboard |
+
+![5" freestyle quad close-up: carbon frame, motor bells, twisted 3-blade props, strapped 6S LiPo](docs/screenshots/quad-closeup.jpg)
+
+### Six quad classes, each with its own model and tune
+
+![Quad classes: 5" freestyle, 5" race, 3" toothpick, 3" cinewhoop, 7" long range, 65mm tiny whoop](docs/screenshots/quad-classes.jpg)
+
+### Settings
+
+| | |
+|---|---|
+| ![Race tab: modes, tracks, leaderboard](docs/screenshots/settings-race.jpg) | ![PIDs tab: Betaflight-scaled PIDs, simplified sliders, CLI import](docs/screenshots/settings-pids.jpg) |
+| ![Rates tab: Actual / Betaflight rates with live curves](docs/screenshots/settings-rates.jpg) | ![Quad tab: pick a class](docs/screenshots/settings-quad.jpg) |
+
+<sub>Screenshots were captured with the in-repo build in headless Chromium.</sub>
 
 ## Quick start
 
