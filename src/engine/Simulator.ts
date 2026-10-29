@@ -99,7 +99,11 @@ export class Simulator {
   static async create(canvas: HTMLCanvasElement): Promise<Simulator> {
     const ui = useUiStore.getState();
     const config = getConfig();
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: config.graphics.antialias, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: config.graphics.antialias,
+      powerPreference: 'high-performance',
+    });
     const scene = new THREE.Scene();
     const collision = new CollisionWorld();
     const map = await buildMap(scene, collision, (msg) => ui.setLoading(msg));
@@ -118,7 +122,9 @@ export class Simulator {
     this.collision = collision;
     this.map = map;
     this.gpu = detectGpu(renderer);
-    console.info(`[agenticFPV] GPU: ${this.gpu.name} (${this.gpu.vendor}) — ${this.gpu.software ? 'SOFTWARE' : 'hardware'} rendering`);
+    console.info(
+      `[agenticFPV] GPU: ${this.gpu.name} (${this.gpu.vendor}) — ${this.gpu.software ? 'SOFTWARE' : 'hardware'} rendering`,
+    );
     useUiStore.getState().setGpu(this.gpu);
 
     this.env = new Environment(renderer, scene);
@@ -145,7 +151,12 @@ export class Simulator {
     this.applyConfig(config, null);
 
     // React to config edits (settings UI, imports, key toggles).
-    this.cleanups.push(useConfigStore.subscribe((s) => s.config, (cfg, prev) => this.applyConfig(cfg, prev)));
+    this.cleanups.push(
+      useConfigStore.subscribe(
+        (s) => s.config,
+        (cfg, prev) => this.applyConfig(cfg, prev),
+      ),
+    );
     const onResize = () => this.resize();
     window.addEventListener('resize', onResize);
     this.cleanups.push(() => window.removeEventListener('resize', onResize));
@@ -215,7 +226,11 @@ export class Simulator {
       prev.physics.cells !== cfg.physics.cells ||
       prev.camera.tilt !== cfg.camera.tilt;
     if (modelChanged) this.rebuildQuadModel();
-    if (prev.quad.preset !== cfg.quad.preset || prev.game.laps !== cfg.game.laps || prev.game.gatesInFree !== cfg.game.gatesInFree) {
+    if (
+      prev.quad.preset !== cfg.quad.preset ||
+      prev.game.laps !== cfg.game.laps ||
+      prev.game.gatesInFree !== cfg.game.gatesInFree
+    ) {
       if (prev.game.gatesInFree !== cfg.game.gatesInFree) this.game.rebuildGates();
       this.resetQuad();
     }
@@ -396,14 +411,21 @@ export class Simulator {
       fwd.y = 0;
       if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
       fwd.normalize();
-      const desired = subject.pos.clone().addScaledVector(fwd, -2.4 * size).add(new THREE.Vector3(0, 0.9 * size, 0));
+      const desired = subject.pos
+        .clone()
+        .addScaledVector(fwd, -2.4 * size)
+        .add(new THREE.Vector3(0, 0.9 * size, 0));
       this.chasePos.lerp(desired, 1 - Math.exp(-frameDt * 8));
       cam.position.copy(this.chasePos);
       cam.lookAt(subject.pos);
     } else if (mode === 'orbit') {
       const t = performance.now() / 4000;
       cam.fov = 45;
-      cam.position.set(subject.pos.x + Math.cos(t) * 0.6 * size, subject.pos.y + 0.22 * size, subject.pos.z + Math.sin(t) * 0.6 * size);
+      cam.position.set(
+        subject.pos.x + Math.cos(t) * 0.6 * size,
+        subject.pos.y + 0.22 * size,
+        subject.pos.z + Math.sin(t) * 0.6 * size,
+      );
       cam.lookAt(subject.pos);
     } else {
       cam.position.copy(this.pilotPos);
@@ -477,7 +499,12 @@ export class Simulator {
       this.quad.wind,
     );
     const listenerDist = cfg.camera.mode === 'fpv' ? 0 : this.camera.position.distanceTo(subject.pos);
-    this.audio.update(subject, listenerDist, menuOpen || (replay.active && !replay.playing), getPreset(cfg.quad.preset).model.blades);
+    this.audio.update(
+      subject,
+      listenerDist,
+      menuOpen || (replay.active && !replay.playing),
+      getPreset(cfg.quad.preset).model.blades,
+    );
 
     this.hud.lap = replay.active ? replay.label() : this.game.osdText(this.camera);
     this.hud.bigCountdown = !replay.active && this.game.session.phase === 'countdown';
@@ -485,7 +512,12 @@ export class Simulator {
     this.listeners.forEach((fn) => fn(this));
 
     const renderStart = performance.now();
-    this.post.render(this.scene, this.camera, computeVideoFx(cfg.video, cfg.camera.mode, s.signal, now / 1000), now / 1000);
+    this.post.render(
+      this.scene,
+      this.camera,
+      computeVideoFx(cfg.video, cfg.camera.mode, s.signal, now / 1000),
+      now / 1000,
+    );
     this.perf.renderMs = ema(this.perf.renderMs, performance.now() - renderStart);
     this.perf.frameMs = ema(this.perf.frameMs, now - frameStart || frameDt * 1000);
   }

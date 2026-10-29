@@ -165,7 +165,8 @@ export class Game {
       onLap: (lap, pb) => {
         if (pb) this.deps.toast(`New personal best: ${lap.toFixed(2)}s`, 2500);
       },
-      onFinish: (summary) => this.deps.onRaceFinished({ ...summary, trackName: this.track.name, quadName: preset.name }),
+      onFinish: (summary) =>
+        this.deps.onRaceFinished({ ...summary, trackName: this.track.name, quadName: preset.name }),
     });
     this.ensureGhostModel();
   }

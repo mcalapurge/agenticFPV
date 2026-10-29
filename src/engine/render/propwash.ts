@@ -111,7 +111,10 @@ export class PropWashEffects {
       aColor: new Float32Array(MAX * 3),
     };
     for (const [name, size] of ATTRS) {
-      this.geometry.setAttribute(name, new THREE.BufferAttribute(this.arrays[name], size).setUsage(THREE.DynamicDrawUsage));
+      this.geometry.setAttribute(
+        name,
+        new THREE.BufferAttribute(this.arrays[name], size).setUsage(THREE.DynamicDrawUsage),
+      );
     }
     this.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     this.material = new THREE.ShaderMaterial({
@@ -222,10 +225,17 @@ export class PropWashEffects {
           const r = Math.random() * 0.35 * size;
           const c = Math.cos(a);
           const sn = Math.sin(a);
-          p.copy(hp).addScaledVector(t1, c * r).addScaledVector(t2, sn * r).addScaledVector(n, 0.03);
+          p.copy(hp)
+            .addScaledVector(t1, c * r)
+            .addScaledVector(t2, sn * r)
+            .addScaledVector(n, 0.03);
           const sp = (2.5 + Math.random() * 5.5) * (0.4 + strength) * Math.max(0.5, size);
-          v.copy(t1).multiplyScalar(c * sp).addScaledVector(t2, sn * sp).addScaledVector(n, 0.4 + Math.random() * 1.6);
-          if (grass && Math.random() < 0.55) this.spawn(p, v, 0.6 + Math.random() * 0.6, 0.05 + Math.random() * 0.05, -3.5, GRASS);
+          v.copy(t1)
+            .multiplyScalar(c * sp)
+            .addScaledVector(t2, sn * sp)
+            .addScaledVector(n, 0.4 + Math.random() * 1.6);
+          if (grass && Math.random() < 0.55)
+            this.spawn(p, v, 0.6 + Math.random() * 0.6, 0.05 + Math.random() * 0.05, -3.5, GRASS);
           else {
             this.spawn(
               p,

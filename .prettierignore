@@ -7,3 +7,5 @@ docs/screenshots
 playwright-report
 test-results
 e2e/**/*-snapshots
+# Hand-aligned compact rules; one-declaration-per-line would quadruple its length.
+src/ui/styles.css

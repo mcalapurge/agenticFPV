@@ -128,7 +128,11 @@ export class Replay {
     const f = Math.min(1, Math.max(0, (this.cursor - B[a]) / Math.max(1e-6, B[b] - B[a])));
     const v = this.view;
     const prev = v.pos.clone();
-    v.pos.set(B[a + 1] + (B[b + 1] - B[a + 1]) * f, B[a + 2] + (B[b + 2] - B[a + 2]) * f, B[a + 3] + (B[b + 3] - B[a + 3]) * f);
+    v.pos.set(
+      B[a + 1] + (B[b + 1] - B[a + 1]) * f,
+      B[a + 2] + (B[b + 2] - B[a + 2]) * f,
+      B[a + 3] + (B[b + 3] - B[a + 3]) * f,
+    );
     const step = dt * this.speed;
     if (step > 0) v.vel.copy(v.pos).sub(prev).divideScalar(step);
     v.quat.set(B[a + 4], B[a + 5], B[a + 6], B[a + 7]);

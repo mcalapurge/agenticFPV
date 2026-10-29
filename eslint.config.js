@@ -21,4 +21,9 @@ export default defineConfig([
     files: ['scripts/**/*.ts', 'e2e/**/*.ts', '*.config.{ts,js}'],
     languageOptions: { globals: { ...globals.node } },
   },
+  {
+    // Playwright fixtures use `async ({}, use) => …`, which is not a React hook.
+    files: ['e2e/**/*.ts'],
+    rules: { 'react-hooks/rules-of-hooks': 'off', 'no-empty-pattern': 'off' },
+  },
 ]);

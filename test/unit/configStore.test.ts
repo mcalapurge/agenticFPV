@@ -56,7 +56,10 @@ describe('config store', () => {
   });
 
   it('migrates the legacy v1 bare config', async () => {
-    localStorage.setItem('agenticfpv.config.v1', JSON.stringify({ pid: { roll: { p: 33 } }, rates: { type: 'betaflight' } }));
+    localStorage.setItem(
+      'agenticfpv.config.v1',
+      JSON.stringify({ pid: { roll: { p: 33 } }, rates: { type: 'betaflight' } }),
+    );
     const store = await loadStore();
     expect(store.getState().config.pid.roll.p).toBe(33);
     expect(store.getState().config.rates.type).toBe('betaflight');

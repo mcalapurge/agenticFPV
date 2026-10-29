@@ -7,7 +7,17 @@ import { toast } from '../../../state/uiStore';
 import { useFrameTick, useSimFrame } from '../../hooks';
 import { Field, Section } from '../fields';
 
-function Bar({ name, value, centered = true, danger = false }: { name: string; value: number; centered?: boolean; danger?: boolean }) {
+function Bar({
+  name,
+  value,
+  centered = true,
+  danger = false,
+}: {
+  name: string;
+  value: number;
+  centered?: boolean;
+  danger?: boolean;
+}) {
   // centered: value -1..1 drawn from the middle; otherwise 0..1 from the left.
   const x = centered ? (value + 1) / 2 : value;
   const style = centered
@@ -89,17 +99,33 @@ function SwitchEditor({ which, title }: { which: 'arm' | 'mode' | 'turtle'; titl
         <tr>
           <td />
           <td>
-            <select aria-label={`${title} source`} value={sw.type} onChange={(e) => set({ type: e.target.value as SwitchConfig['type'] })}>
+            <select
+              aria-label={`${title} source`}
+              value={sw.type}
+              onChange={(e) => set({ type: e.target.value as SwitchConfig['type'] })}
+            >
               {SWITCH_TYPES.map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>
           </td>
           <td>
-            <input type="number" min={0} max={31} step={1} value={sw.index} onChange={(e) => set({ index: +e.target.value })} />
+            <input
+              type="number"
+              min={0}
+              max={31}
+              step={1}
+              value={sw.index}
+              onChange={(e) => set({ index: +e.target.value })}
+            />
           </td>
           <td>
-            <input type="number" step={0.05} value={sw.threshold} onChange={(e) => set({ threshold: +e.target.value })} />
+            <input
+              type="number"
+              step={0.05}
+              value={sw.threshold}
+              onChange={(e) => set({ threshold: +e.target.value })}
+            />
           </td>
           <td>
             <input type="checkbox" checked={sw.invert} onChange={(e) => set({ invert: e.target.checked })} />
@@ -132,7 +158,11 @@ export function ControllerTab() {
         <div className="grid2">
           <div className="row">
             <label htmlFor="pad">Controller</label>
-            <select id="pad" value={input.gamepadIndex} onChange={(e) => update((d) => void (d.input.gamepadIndex = +e.target.value))}>
+            <select
+              id="pad"
+              value={input.gamepadIndex}
+              onChange={(e) => update((d) => void (d.input.gamepadIndex = +e.target.value))}
+            >
               {pads.length ? (
                 pads.map((p) => (
                   <option key={p.index} value={p.index}>
@@ -164,8 +194,8 @@ export function ControllerTab() {
           </div>
         </div>
         <p className="hint">
-          Radio transmitters: enable USB Joystick (HID) mode, plug in, then press any stick/button so the browser exposes
-          it. Run the wizard to map and calibrate.
+          Radio transmitters: enable USB Joystick (HID) mode, plug in, then press any stick/button so the browser
+          exposes it. Run the wizard to map and calibrate.
         </p>
         <button className="btn primary" onClick={() => setWizardOpen(true)}>
           Run calibration wizard
@@ -184,7 +214,11 @@ export function ControllerTab() {
         </Section>
         <Section title="Raw axes">
           <div className="bars">
-            {pad ? pad.axes.map((v, i) => <Bar key={i} name={`Axis ${i}`} value={v} />) : <span className="hint">No gamepad axes. Keyboard fallback active.</span>}
+            {pad ? (
+              pad.axes.map((v, i) => <Bar key={i} name={`Axis ${i}`} value={v} />)
+            ) : (
+              <span className="hint">No gamepad axes. Keyboard fallback active.</span>
+            )}
           </div>
         </Section>
       </div>
@@ -207,7 +241,11 @@ export function ControllerTab() {
                 <tr key={ch}>
                   <td>{ch}</td>
                   <td>
-                    <select aria-label={`${ch} axis`} value={c.axis} onChange={(e) => setChannel(ch, { axis: +e.target.value })}>
+                    <select
+                      aria-label={`${ch} axis`}
+                      value={c.axis}
+                      onChange={(e) => setChannel(ch, { axis: +e.target.value })}
+                    >
                       {Array.from({ length: 8 }, (_, i) => (
                         <option key={i} value={i}>
                           Axis {i}
@@ -216,7 +254,12 @@ export function ControllerTab() {
                     </select>
                   </td>
                   <td>
-                    <input aria-label={`${ch} invert`} type="checkbox" checked={c.invert} onChange={(e) => setChannel(ch, { invert: e.target.checked })} />
+                    <input
+                      aria-label={`${ch} invert`}
+                      type="checkbox"
+                      checked={c.invert}
+                      onChange={(e) => setChannel(ch, { invert: e.target.checked })}
+                    />
                   </td>
                   {(['min', 'center', 'max'] as const).map((k) => (
                     <td key={k}>
@@ -243,8 +286,8 @@ export function ControllerTab() {
         <SwitchEditor which="turtle" title="Turtle" />
         <p className="hint">
           Arming requires throttle low (BF-style). With no switch mapped, Space/Enter toggles arm. Turtle mode (crash
-          flip) is latched when you arm with the turtle switch on (keyboard: T), then push the sticks toward the side you
-          want to flip.
+          flip) is latched when you arm with the turtle switch on (keyboard: T), then push the sticks toward the side
+          you want to flip.
         </p>
       </Section>
     </>

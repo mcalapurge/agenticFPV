@@ -18,7 +18,8 @@ export interface ParsedCli {
 
 const PID_KEYS =
   /^(p|i|d|f|d_min)_(roll|pitch|yaw)$|^(iterm_limit|pidsum_limit|pidsum_limit_yaw|tpa_rate|tpa_breakpoint|angle_level_strength|angle_limit|dterm_lpf1_static_hz|iterm_relax|iterm_relax_cutoff)$/;
-const RATE_KEYS = /rc_rate|srate|_expo$|^rates_type$|^thr_mid$|^thr_expo$|^throttle_limit_percent$|^tpa_rate$|^tpa_breakpoint$/;
+const RATE_KEYS =
+  /rc_rate|srate|_expo$|^rates_type$|^thr_mid$|^thr_expo$|^throttle_limit_percent$|^tpa_rate$|^tpa_breakpoint$/;
 
 export function parseBetaflightCli(text: string): ParsedCli {
   const profiles: Record<number, KV> = {};
@@ -90,9 +91,12 @@ export function applyBetaflightCli(config: Config, text: string): string[] {
   if (tpaBp !== undefined) {
     set('TPA breakpoint', config.pid, 'tpaBreakpoint', Math.min(1, Math.max(0, (num(tpaBp) - 1000) / 1000)));
   }
-  if (pid.dterm_lpf1_static_hz !== undefined) set('D-term LPF', config.filters, 'dtermLpfHz', num(pid.dterm_lpf1_static_hz));
-  if (global.gyro_lpf1_static_hz !== undefined) set('Gyro LPF', config.filters, 'gyroLpfHz', num(global.gyro_lpf1_static_hz));
-  if (global.dshot_idle_value !== undefined) set('Motor idle', config.flight, 'motorIdle', num(global.dshot_idle_value) / 10000);
+  if (pid.dterm_lpf1_static_hz !== undefined)
+    set('D-term LPF', config.filters, 'dtermLpfHz', num(pid.dterm_lpf1_static_hz));
+  if (global.gyro_lpf1_static_hz !== undefined)
+    set('Gyro LPF', config.filters, 'gyroLpfHz', num(global.gyro_lpf1_static_hz));
+  if (global.dshot_idle_value !== undefined)
+    set('Motor idle', config.flight, 'motorIdle', num(global.dshot_idle_value) / 10000);
   if (features.AIRMODE !== undefined) set('Airmode', config.pid, 'airmode', features.AIRMODE);
 
   // Rates.

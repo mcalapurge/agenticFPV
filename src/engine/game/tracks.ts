@@ -34,7 +34,8 @@ export const BUILTIN_TRACKS: readonly Track[] = [
   {
     id: 'works',
     name: 'Works Circuit',
-    description: 'Full-map lap: warehouse run, pipe bridge, smokestack, tower-top drop, skeleton floor 2, container yard.',
+    description:
+      'Full-map lap: warehouse run, pipe bridge, smokestack, tower-top drop, skeleton floor 2, container yard.',
     gates: [
       { p: [0, 1.8, 38], yaw: 0 },
       { p: [10, 3, -25], yaw: -90 },

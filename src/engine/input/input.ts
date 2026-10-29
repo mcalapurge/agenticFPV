@@ -32,7 +32,10 @@ export function normaliseAxis(name: ChannelName, raw: number, c: ChannelConfig, 
     if (c.invert) v = 1 - v;
     return clamp(v, 0, 1);
   }
-  let v = raw >= c.center ? (raw - c.center) / Math.max(1e-6, c.max - c.center) : (raw - c.center) / Math.max(1e-6, c.center - c.min);
+  let v =
+    raw >= c.center
+      ? (raw - c.center) / Math.max(1e-6, c.max - c.center)
+      : (raw - c.center) / Math.max(1e-6, c.center - c.min);
   if (c.invert) v = -v;
   v = Math.abs(v) < deadband ? 0 : Math.sign(v) * ((Math.abs(v) - deadband) / (1 - deadband));
   return clamp(v, -1, 1);
@@ -61,7 +64,15 @@ export class InputManager {
   config: Config;
   readonly keys = new Set<string>();
   readonly kb: Sticks = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
-  readonly state: InputState = { throttle: 0, yaw: 0, pitch: 0, roll: 0, armSwitch: false, angleSwitch: null, turtleSwitch: false };
+  readonly state: InputState = {
+    throttle: 0,
+    yaw: 0,
+    pitch: 0,
+    roll: 0,
+    armSwitch: false,
+    angleSwitch: null,
+    turtleSwitch: false,
+  };
   usingKeyboard = true;
   kbArm = false;
   kbTurtle = false;
@@ -121,6 +132,7 @@ export class InputManager {
       }
       if (k === 'm') this.emit('mode');
       if (k === 't') this.kbTurtle = !this.kbTurtle;
+      if (k === 'x') this.kb.throttle = 0; // act on the event: a tap can fall between two polls
       if (k === 'h') this.emit('help');
     }
     if (down) this.keys.add(k);
@@ -213,7 +225,11 @@ export interface CalibrationResult {
 }
 
 export const WIZARD_STEPS: readonly WizardStep[] = [
-  { id: 'baseline', text: 'Centre roll/pitch/yaw, throttle fully DOWN, arm switch OFF. Then press Next.', baseline: true },
+  {
+    id: 'baseline',
+    text: 'Centre roll/pitch/yaw, throttle fully DOWN, arm switch OFF. Then press Next.',
+    baseline: true,
+  },
   { id: 'throttle', text: 'Move THROTTLE fully UP and hold it. Press Next.', ch: 'throttle' },
   { id: 'center1', text: 'Throttle back DOWN, sticks centred. Press Next.', baseline: true },
   { id: 'yaw', text: 'Push YAW fully RIGHT and hold. Press Next.', ch: 'yaw' },
@@ -221,14 +237,21 @@ export const WIZARD_STEPS: readonly WizardStep[] = [
   { id: 'pitch', text: 'Push PITCH fully UP (forward) and hold. Press Next.', ch: 'pitch' },
   { id: 'center3', text: 'Release to centre. Press Next.', baseline: true },
   { id: 'roll', text: 'Push ROLL fully RIGHT and hold. Press Next.', ch: 'roll' },
-  { id: 'range', text: 'Now stir BOTH sticks around their full range several times (corners!). Press Next.', range: true },
+  {
+    id: 'range',
+    text: 'Now stir BOTH sticks around their full range several times (corners!). Press Next.',
+    range: true,
+  },
   { id: 'centers', text: 'Let the sticks return to centre (throttle DOWN). Press Next.', centers: true },
-  { id: 'arm', text: 'Flip your ARM switch ON (or press the button you want to arm with). Press Next. (Skip to use Space key.)', arm: true },
+  {
+    id: 'arm',
+    text: 'Flip your ARM switch ON (or press the button you want to arm with). Press Next. (Skip to use Space key.)',
+    arm: true,
+  },
 ];
 
 export type WizardOutcome =
-  | { kind: 'step'; step: WizardStep; index: number; warning?: string }
-  | { kind: 'done'; result: CalibrationResult };
+  { kind: 'step'; step: WizardStep; index: number; warning?: string } | { kind: 'done'; result: CalibrationResult };
 
 /**
  * Step-by-step calibration as a pure state machine over pad snapshots:
@@ -267,7 +290,12 @@ export class CalibrationWizard {
   next(pad: PadSnapshot | null, skip = false): WizardOutcome {
     const st = this.step;
     if (!pad) {
-      return { kind: 'step', step: st, index: this.index, warning: 'No controller detected. Plug in your transmitter (USB joystick mode) and move a stick.' };
+      return {
+        kind: 'step',
+        step: st,
+        index: this.index,
+        warning: 'No controller detected. Plug in your transmitter (USB joystick mode) and move a stick.',
+      };
     }
     const axes = [...pad.axes];
     if (st.baseline) {
@@ -297,7 +325,13 @@ export class CalibrationWizard {
       axes.forEach((v, i) => {
         const d = v - (this.baseline[i] ?? 0);
         if (!found && !this.used(i) && Math.abs(d) > 0.4) {
-          found = { type: 'axis', index: i, threshold: ((this.baseline[i] ?? 0) + v) / 2, invert: d < 0, toggle: false };
+          found = {
+            type: 'axis',
+            index: i,
+            threshold: ((this.baseline[i] ?? 0) + v) / 2,
+            invert: d < 0,
+            toggle: false,
+          };
         }
       });
       pad.buttons.forEach((b, i) => {

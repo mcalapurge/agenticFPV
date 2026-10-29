@@ -18,8 +18,12 @@ describe('signalQuality', () => {
   });
 
   it('gets more range from more power and digital punches through walls', () => {
-    expect(signalQuality(500, 0, video({ vtxPower: 600 }))).toBeGreaterThan(signalQuality(500, 0, video({ vtxPower: 25 })));
-    expect(signalQuality(0, 3, video({ system: 'digital' }))).toBeGreaterThan(signalQuality(0, 3, video({ system: 'analog' })));
+    expect(signalQuality(500, 0, video({ vtxPower: 600 }))).toBeGreaterThan(
+      signalQuality(500, 0, video({ vtxPower: 25 })),
+    );
+    expect(signalQuality(0, 3, video({ system: 'digital' }))).toBeGreaterThan(
+      signalQuality(0, 3, video({ system: 'analog' })),
+    );
   });
 });
 
@@ -33,7 +37,11 @@ describe('computeVideoFx', () => {
   });
 
   it('digital pixelates and freezes instead', () => {
-    expect(computeVideoFx(video({ system: 'digital' }), 'fpv', 1, 0)).toMatchObject({ digital: 1, pixelate: 0, freeze: false });
+    expect(computeVideoFx(video({ system: 'digital' }), 'fpv', 1, 0)).toMatchObject({
+      digital: 1,
+      pixelate: 0,
+      freeze: false,
+    });
     const lost = computeVideoFx(video({ system: 'digital' }), 'fpv', 0.02, 0);
     expect(lost.pixelate).toBeGreaterThan(1);
     expect(lost.freeze).toBe(true);
@@ -58,7 +66,9 @@ describe('GPU detection', () => {
   });
 
   it('labels strip ANGLE noise', () => {
-    expect(gpuLabel('ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0, D3D11)')).toBe('NVIDIA GeForce RTX 4070');
+    expect(gpuLabel('ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0, D3D11)')).toBe(
+      'NVIDIA GeForce RTX 4070',
+    );
     expect(gpuLabel('Apple M3 Pro')).toBe('Apple M3 Pro');
   });
 });

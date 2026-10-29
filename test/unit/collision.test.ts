@@ -34,7 +34,11 @@ describe('CollisionWorld.raycast', () => {
     const w = new CollisionWorld();
     w.ground = false;
     // 45° about Y: the face is now a corner pointing at the ray.
-    w.addBox(new Vector3(0, 0, 0), new Vector3(1, 1, 1), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 4));
+    w.addBox(
+      new Vector3(0, 0, 0),
+      new Vector3(1, 1, 1),
+      new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 4),
+    );
     const hit = w.raycast(new Vector3(-5, 0, 0), new Vector3(1, 0, 0), 10);
     expect(hit?.t).toBeCloseTo(5 - Math.SQRT2, 6);
   });

@@ -7,7 +7,11 @@ export const AXES: Axis[] = ['roll', 'pitch', 'yaw'];
 const COLORS: Record<Axis, string> = { roll: '#ff7a1a', pitch: '#22c8ff', yaw: '#46d37b' };
 
 /** Draw the three rate curves plus live stick markers. */
-export function drawRateCurves(ctx: CanvasRenderingContext2D, rates: Config['rates'], sticks?: Record<Axis, number>): number {
+export function drawRateCurves(
+  ctx: CanvasRenderingContext2D,
+  rates: Config['rates'],
+  sticks?: Record<Axis, number>,
+): number {
   const { width: W, height: H } = ctx.canvas;
   ctx.clearRect(0, 0, W, H);
   ctx.strokeStyle = '#2c313a';

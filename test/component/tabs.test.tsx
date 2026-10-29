@@ -21,7 +21,8 @@ describe('PIDs tab', () => {
   it('imports a Betaflight CLI diff', async () => {
     render(<PidsTab />);
     await userEvent.click(screen.getByRole('button', { name: /Import from Betaflight CLI/ }));
-    const text = 'profile 0\nset p_roll = 52\nset i_roll = 95\nrateprofile 0\nset rates_type = ACTUAL\nset roll_srate = 85';
+    const text =
+      'profile 0\nset p_roll = 52\nset i_roll = 95\nrateprofile 0\nset rates_type = ACTUAL\nset roll_srate = 85';
     fireEvent.change(screen.getByLabelText('Betaflight CLI'), { target: { value: text } });
     await userEvent.click(screen.getByRole('button', { name: 'Import' }));
     expect(config().pid.roll).toMatchObject({ p: 52, i: 95 });

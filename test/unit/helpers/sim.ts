@@ -29,7 +29,12 @@ export function makeSim(mutate?: (cfg: Config) => void, preset?: string): Sim {
   return { cfg, fc, quad };
 }
 
-export function run(sim: Sim, seconds: number, rc: Sticks | ((t: number) => Sticks), onStep?: (t: number, sim: Sim) => void): void {
+export function run(
+  sim: Sim,
+  seconds: number,
+  rc: Sticks | ((t: number) => Sticks),
+  onStep?: (t: number, sim: Sim) => void,
+): void {
   const steps = Math.round(seconds / DT);
   for (let i = 0; i < steps; i++) {
     const r = typeof rc === 'function' ? rc(i * DT) : rc;

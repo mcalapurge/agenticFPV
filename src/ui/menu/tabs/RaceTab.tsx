@@ -1,7 +1,14 @@
 import { useReducer, useState } from 'react';
 import { fmtTime } from '../../../engine/format';
 import { getPreset } from '../../../engine/sim/presets';
-import { allTracks, getRecord, importTrack, loadUserTracks, saveUserTracks, type Track } from '../../../engine/game/tracks';
+import {
+  allTracks,
+  getRecord,
+  importTrack,
+  loadUserTracks,
+  saveUserTracks,
+  type Track,
+} from '../../../engine/game/tracks';
 import type { GameMode } from '../../../state/configSchema';
 import { useConfigStore } from '../../../state/configStore';
 import { useSim } from '../../../state/engineStore';
@@ -100,7 +107,11 @@ export function RaceTab() {
           {allTracks().map((t) => {
             const r = getRecord(t.id, quadId);
             return (
-              <div key={t.id} className={`trackrow${t.id === current.id ? ' active' : ''}`} data-testid={`track-${t.id}`}>
+              <div
+                key={t.id}
+                className={`trackrow${t.id === current.id ? ' active' : ''}`}
+                data-testid={`track-${t.id}`}
+              >
                 <div>
                   <b>
                     {t.name}
@@ -109,7 +120,9 @@ export function RaceTab() {
                   <small>
                     {t.gates.length} gates · {t.description ?? ''}
                   </small>
-                  <small>{r?.bestLap != null ? `PB with this quad: ${fmtTime(r.bestLap)}` : 'No lap set with this quad yet'}</small>
+                  <small>
+                    {r?.bestLap != null ? `PB with this quad: ${fmtTime(r.bestLap)}` : 'No lap set with this quad yet'}
+                  </small>
                 </div>
                 <div className="actions">
                   <button className="btn" onClick={() => selectTrack(t)}>
@@ -117,7 +130,9 @@ export function RaceTab() {
                   </button>
                   <button
                     className="btn"
-                    onClick={() => downloadJson(`${t.id}.track.json`, { name: t.name, description: t.description, gates: t.gates })}
+                    onClick={() =>
+                      downloadJson(`${t.id}.track.json`, { name: t.name, description: t.description, gates: t.gates })
+                    }
                   >
                     Export
                   </button>

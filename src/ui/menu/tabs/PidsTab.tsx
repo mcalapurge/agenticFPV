@@ -15,8 +15,8 @@ function CliImport({ onClose }: { onClose: () => void }) {
   return (
     <div className="wizard" data-testid="cli-import">
       <p>
-        Paste a Betaflight CLI diff to import PIDs, feedforward, TPA, filters, idle, airmode and rates (active profile and
-        rate profile are used).
+        Paste a Betaflight CLI diff to import PIDs, feedforward, TPA, filters, idle, airmode and rates (active profile
+        and rate profile are used).
       </p>
       <textarea
         aria-label="Betaflight CLI"
@@ -149,7 +149,12 @@ export function PidsTab() {
           {
             title: 'Flight mode',
             fields: [
-              { kind: 'select', path: 'flight.mode', label: 'Mode', options: { acro: 'Acro (rate)', angle: 'Angle (self-level)' } },
+              {
+                kind: 'select',
+                path: 'flight.mode',
+                label: 'Mode',
+                options: { acro: 'Acro (rate)', angle: 'Angle (self-level)' },
+              },
               { kind: 'number', path: 'pid.angleStrength', label: 'Angle strength', min: 10, max: 200, step: 1 },
               { kind: 'number', path: 'pid.angleLimit', label: 'Angle limit', unit: '°', min: 10, max: 85, step: 1 },
             ],
@@ -159,7 +164,15 @@ export function PidsTab() {
             fields: [
               { kind: 'bool', path: 'pid.airmode', label: 'Airmode' },
               { kind: 'bool', path: 'pid.itermRelax', label: 'I-term relax' },
-              { kind: 'number', path: 'pid.itermRelaxCutoff', label: 'I-term relax threshold', unit: '°/s', min: 5, max: 200, step: 1 },
+              {
+                kind: 'number',
+                path: 'pid.itermRelaxCutoff',
+                label: 'I-term relax threshold',
+                unit: '°/s',
+                min: 5,
+                max: 200,
+                step: 1,
+              },
               { kind: 'number', path: 'pid.iTermLimit', label: 'I-term limit', min: 50, max: 500, step: 5 },
               { kind: 'number', path: 'pid.pidSumLimit', label: 'PID sum limit', min: 100, max: 1000, step: 10 },
               { kind: 'number', path: 'pid.pidSumLimitYaw', label: 'PID sum limit yaw', min: 100, max: 1000, step: 10 },

@@ -1,23 +1,25 @@
 # agenticFPV — Plan & Progress
 
-Web-based FPV drone simulator (Three.js + Vite) with Betaflight-style flight controller,
+Web-based FPV drone simulator (TypeScript, Three.js, React 19, Vite) with Betaflight-style flight controller,
 USB gamepad / RC-transmitter input, and an abandoned-buildings map.
 
 Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 
 ## Architecture
 
-| Area | File(s) | Notes |
-|------|---------|-------|
-| Config / persistence | `src/config.js` | Defaults, deep-merge, localStorage, import/export JSON |
-| Rates | `src/sim/rates.js` | Betaflight *Actual* + *Betaflight* rate formulas, throttle mid/expo |
-| Flight controller | `src/sim/flightController.js` | RC smoothing, gyro/D-term LPF, PID+FF (BF scaling), TPA, airmode mixer, angle mode |
-| Quad physics | `src/sim/quad.js` | Rigid body, per-motor lag, thrust ∝ rpm², prop inflow loss, drag, prop-wash, battery sag |
-| Collision | `src/sim/collision.js` | Sphere vs oriented boxes, spatial hash broadphase |
-| World | `src/world/*.js` | Procedural textures, abandoned buildings, rubble, containers, gates |
-| Input | `src/input/input.js` | Gamepad API, axis mapping, calibration, auto-detect, arm switch, keyboard fallback |
-| UI | `src/ui/*.js` | Settings panel (tabs), rate curve preview, OSD, stick overlay |
-| Entry | `src/main.js` | Renderer, cameras (FPV/chase/LOS), fixed-step 1 kHz loop |
+| Area                 | File(s)                                       | Notes                                                                                      |
+| -------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Config / persistence | `src/state/configSchema.ts`, `configStore.ts` | Zod schema (type + defaults + validation), Zustand/Immer store, localStorage, v1 migration |
+| Engine entry         | `src/engine/Simulator.ts`                     | Renderer, cameras (FPV/chase/LOS/orbit), fixed-step 1 kHz loop, arming, video link         |
+| Rates                | `src/engine/sim/rates.ts`                     | Betaflight _Actual_ + _Betaflight_ rate formulas, throttle mid/expo                        |
+| Flight controller    | `src/engine/sim/flightController.ts`          | RC smoothing, gyro/D-term LPF, PID+FF (BF scaling), TPA, airmode mixer, angle mode         |
+| Quad physics         | `src/engine/sim/quad.ts`                      | Rigid body, per-motor lag, thrust ∝ rpm², prop inflow loss, drag, prop-wash, battery sag   |
+| Collision            | `src/engine/sim/collision.ts`                 | Sphere vs oriented boxes, spatial hash broadphase, raycast, occluder count                 |
+| Game                 | `src/engine/game/*.ts`                        | Tracks + records, pure `RaceSession` state machine, gates, replay, `Game` orchestrator     |
+| World / render       | `src/engine/world/*.ts`, `render/*.ts`        | Map, procedural PBR, quad models, environment, post-FX, prop-wash dust, grass wind         |
+| Input                | `src/engine/input/input.ts`                   | Gamepad API, axis mapping, pure calibration wizard, arm switch, keyboard fallback          |
+| UI                   | `src/ui/**/*.tsx`                             | React 19: settings menu (tabs), rate curve preview, OSD, stick overlay, overlays           |
+| Tests                | `test/unit`, `test/component`, `e2e`          | Vitest (node + jsdom), Testing Library, Playwright                                         |
 
 ## Milestones
 
@@ -32,17 +34,26 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 ## Phase 2 — Velocidrone-style features (no multiplayer)
 
 - [x] **M8 Contact physics + turtle + wind** — multi-point rigid-body contacts (quad tips/rests realistically),
-  reversible motors, Betaflight turtle mode (switch / `T`), wind + gusts
+      reversible motors, Betaflight turtle mode (switch / `T`), wind + gusts
 - [x] **M9 Quad classes + detailed models** — presets (5" race, 5" freestyle, 3" toothpick, cinewhoop,
-  7" long range, 65mm tiny whoop) with high-poly procedural models (twisted 3-blade props, motor bells, ducts…)
+      7" long range, 65mm tiny whoop) with high-poly procedural models (twisted 3-blade props, motor bells, ducts…)
 - [x] **M10 Motor audio** — WebAudio synth: per-motor whine + blade-pass tones, prop wash, impacts, volume
 - [x] **M11 Game modes** — tracks (3 built-in + custom), track editor, race mode (countdown, laps, missed gates,
-  results), time-trial ghost of best lap, local leaderboards, DVR replay
+      results), time-trial ghost of best lap, local leaderboards, DVR replay
 - [x] **M12 Video & environment** — post-FX (fisheye, analog static/breakup by range & walls, digital HD look),
-  time-of-day presets, CC0 HDRI image-based lighting (@pmndrs/assets → Poly Haven)
+      time-of-day presets, CC0 HDRI image-based lighting (@pmndrs/assets → Poly Haven)
 - [x] **M13 Visual upgrade** — PBR procedural textures (normal + roughness), detailed props (barrels, pallets,
-  rebar, stairs, fences, lamps, tyres), optional `npm run fetch-assets` for CC0 Poly Haven textures
+      rebar, stairs, fences, lamps, tyres), optional `npm run fetch-assets` for CC0 Poly Haven textures
 - [x] **M14 Betaflight CLI import, UI, docs, verification**
+
+## Phase 3 — TypeScript + modern stack (branch `claude/typescript-modernization`)
+
+- [x] **M15 Toolchain** — TypeScript (strict), ESLint flat config + typescript-eslint + React Hooks, Prettier, Vitest, Playwright
+- [x] **M16 State** — Zod config schema as the single source of truth; Zustand stores for config/UI/engine
+- [x] **M17 Engine port** — every engine module in strict TS; `Simulator` class; pure, testable `RaceSession`,
+      `CalibrationWizard`, video-link and audio helpers
+- [x] **M18 React UI** — settings menu, HUD and overlays rebuilt in React 19
+- [x] **M19 Tests** — Vitest unit + component suites, Playwright end-to-end + visual suites, CI workflow
 
 Note: asset hosts api.polyhaven.com / dl.polyhaven.org / ambientcg.com are blocked by this cloud
 environment's network policy, so real photo textures are fetched by a script the user runs locally.
@@ -83,8 +94,8 @@ environment's network policy, so real photo textures are fetched by a script the
   airfoil blades (2/3/4/5-blade), rpm-driven blur discs, ducts, FC stack, camera w/ lens, strapped
   labelled LiPo + XT60 lead, antenna, GPS. New Quad tab + orbit camera.
 - **M10** WebAudio synth driven by simulated rpm: per-motor sawtooth whine at electrical freq (7 pole pairs)
-  + blade-pass tones, band-passed prop noise, LFO prop-wash flutter, airspeed wind rush, impact crack/thump,
-  distance attenuation + low-pass in third-person views. Volume controls in Camera/Video/Audio tab.
+  - blade-pass tones, band-passed prop noise, LFO prop-wash flutter, airspeed wind rush, impact crack/thump,
+    distance attenuation + low-pass in third-person views. Volume controls in Camera/Video/Audio tab.
 - **M11** Game modes: Free fly / Practice / Race / Track editor. 3 built-in tracks (Works Circuit, Warehouse
   Sprint, Tower Dive incl. tilted + dive gates), all verified clear of colliders. Padded striped gates with
   number boards + colliders; next/next-next highlights + off-screen pointer; holeshot, laps, split deltas vs PB,

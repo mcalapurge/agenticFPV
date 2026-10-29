@@ -172,7 +172,8 @@ export class Quad implements QuadView {
       const m = this.motors[i];
       const target = Math.max(-1, Math.min(1, cmds[i])) * vFactor;
       const speedingUp =
-        Math.abs(target) > Math.abs(this.motorSpeed[i]) && Math.sign(target) === Math.sign(this.motorSpeed[i] || target);
+        Math.abs(target) > Math.abs(this.motorSpeed[i]) &&
+        Math.sign(target) === Math.sign(this.motorSpeed[i] || target);
       const tau = (speedingUp ? p.motorSpinUpMs : p.motorSpinDownMs) / 1000;
       const ds = (target - this.motorSpeed[i]) * (1 - Math.exp(-dt / tau));
       this.motorSpeed[i] += ds;

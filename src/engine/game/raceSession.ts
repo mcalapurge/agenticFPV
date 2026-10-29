@@ -241,7 +241,11 @@ export class RaceSession {
     const a = lo * 8;
     const b = hi * 8;
     const f = Math.min(1, Math.max(0, (t - g[a]) / Math.max(1e-6, g[b] - g[a])));
-    outPos.set(g[a + 1] + (g[b + 1] - g[a + 1]) * f, g[a + 2] + (g[b + 2] - g[a + 2]) * f, g[a + 3] + (g[b + 3] - g[a + 3]) * f);
+    outPos.set(
+      g[a + 1] + (g[b + 1] - g[a + 1]) * f,
+      g[a + 2] + (g[b + 2] - g[a + 2]) * f,
+      g[a + 3] + (g[b + 3] - g[a + 3]) * f,
+    );
     this._qa.set(g[a + 4], g[a + 5], g[a + 6], g[a + 7]).normalize();
     this._qb.set(g[b + 4], g[b + 5], g[b + 6], g[b + 7]).normalize();
     outQuat.slerpQuaternions(this._qa, this._qb, f);
@@ -255,10 +259,13 @@ export class RaceSession {
     if (this.mode === 'race') {
       if (this.phase === 'waiting') return 'RACE · ARM TO START';
       if (this.phase === 'countdown') return `${Math.ceil(this.countdown)}`;
-      const clock = this.phase === 'finished' || this.raceStart === null ? '' : `RACE ${fmtTime(this.clock - this.raceStart)}  `;
+      const clock =
+        this.phase === 'finished' || this.raceStart === null ? '' : `RACE ${fmtTime(this.clock - this.raceStart)}  `;
       lines.push(`${clock}LAP ${Math.min(this.lapTimes.length + 1, this.laps)}/${this.laps}`);
     } else {
-      lines.push(this.lapStart !== null ? `LAP ${fmtTime(this.clock - this.lapStart)}` : 'PRACTICE · FLY THROUGH START');
+      lines.push(
+        this.lapStart !== null ? `LAP ${fmtTime(this.clock - this.lapStart)}` : 'PRACTICE · FLY THROUGH START',
+      );
     }
     const parts = [`GATE ${this.next + 1}/${this.gates.length}`, pointer];
     if (this.lapTimes.length) parts.push(`LAST ${fmtTime(this.lapTimes[this.lapTimes.length - 1])}`);

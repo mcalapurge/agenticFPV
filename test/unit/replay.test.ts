@@ -2,7 +2,11 @@ import { Quaternion, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { formatReplayTime, Replay } from '../../src/engine/game/replay';
 
-const quadAt = (x: number, m = 0.5) => ({ pos: new Vector3(x, 1, 0), quat: new Quaternion(), motorSpeed: [m, m, m, m] });
+const quadAt = (x: number, m = 0.5) => ({
+  pos: new Vector3(x, 1, 0),
+  quat: new Quaternion(),
+  motorSpeed: [m, m, m, m],
+});
 
 function filled(seconds: number, capacitySeconds = 90) {
   const r = new Replay(capacitySeconds, 60);

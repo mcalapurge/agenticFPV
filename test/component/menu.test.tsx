@@ -10,7 +10,8 @@ vi.mock('../../src/ui/menu/io', () => ({ downloadJson: vi.fn(), pickJsonFile: vi
 const io = await import('../../src/ui/menu/io');
 
 const config = () => useConfigStore.getState().config;
-const open = (tab: Parameters<ReturnType<typeof useUiStore.getState>['openMenu']>[0]) => useUiStore.getState().openMenu(tab);
+const open = (tab: Parameters<ReturnType<typeof useUiStore.getState>['openMenu']>[0]) =>
+  useUiStore.getState().openMenu(tab);
 
 describe('settings menu', () => {
   it('renders nothing while closed', () => {

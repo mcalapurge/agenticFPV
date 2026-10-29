@@ -59,7 +59,12 @@ describe('settings fields', () => {
   it('schema sections render titled groups', () => {
     render(
       <SchemaSections
-        sections={[{ title: 'Wind', fields: [{ kind: 'number', path: 'physics.windGust', label: 'Gusts', min: 0, max: 1, step: 0.1 }] }]}
+        sections={[
+          {
+            title: 'Wind',
+            fields: [{ kind: 'number', path: 'physics.windGust', label: 'Gusts', min: 0, max: 1, step: 0.1 }],
+          },
+        ]}
       />,
     );
     expect(screen.getByRole('heading', { name: 'Wind' })).toBeInTheDocument();

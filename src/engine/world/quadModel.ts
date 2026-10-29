@@ -115,7 +115,8 @@ function bladeGeometry(
   thickness: number,
   mirror: boolean,
 ): THREE.BufferGeometry {
-  const spanSeg = 16, foilPts = 12;
+  const spanSeg = 16,
+    foilPts = 12;
   const pos = [];
   const idx = [];
   // Simple cambered airfoil around the chord line (x along chord, y thickness).
@@ -130,9 +131,13 @@ function bladeGeometry(
     const t = s / spanSeg;
     const r = hubR + (tipR - hubR) * t;
     // chord: wide near 35% span, rounded tip
-    const chord = maxChord * (0.55 + 0.75 * Math.sin(Math.min(1, t * 1.35) * Math.PI * 0.85)) * (t > 0.85 ? Math.sqrt(Math.max(0.05, (1 - t) / 0.15)) : 1);
+    const chord =
+      maxChord *
+      (0.55 + 0.75 * Math.sin(Math.min(1, t * 1.35) * Math.PI * 0.85)) *
+      (t > 0.85 ? Math.sqrt(Math.max(0.05, (1 - t) / 0.15)) : 1);
     const twist = Math.atan(pitchM / (2 * Math.PI * r));
-    const ct = Math.cos(twist), st = Math.sin(twist);
+    const ct = Math.cos(twist),
+      st = Math.sin(twist);
     const sweep = t * t * maxChord * 0.35; // swept-back tip
     for (const [fx, fy] of foil) {
       const lx = fx * chord + sweep; // along rotation direction (−Z)
@@ -145,8 +150,10 @@ function bladeGeometry(
   }
   for (let s = 0; s < spanSeg; s++)
     for (let i = 0; i < foilPts; i++) {
-      const a = s * foilPts + i, b = s * foilPts + ((i + 1) % foilPts);
-      const c = a + foilPts, d = b + foilPts;
+      const a = s * foilPts + i,
+        b = s * foilPts + ((i + 1) % foilPts);
+      const c = a + foilPts,
+        d = b + foilPts;
       if (mirror) idx.push(a, b, c, b, d, c);
       else idx.push(a, c, b, b, c, d);
     }
@@ -163,7 +170,13 @@ function bladeGeometry(
   return g;
 }
 
-function propAssembly(propR: number, blades: number, dir: number, mat: THREE.Material, pitchScale: number): THREE.Group {
+function propAssembly(
+  propR: number,
+  blades: number,
+  dir: number,
+  mat: THREE.Material,
+  pitchScale: number,
+): THREE.Group {
   const g = new THREE.Group();
   const hubR = Math.max(0.0035, propR * 0.12);
   const pitch = propR * 2 * pitchScale;
@@ -195,7 +208,13 @@ function ductGeometry(innerR: number, height: number): THREE.LatheGeometry {
   return new THREE.LatheGeometry(pts, 48);
 }
 
-function motorAssembly(r: number, h: number, bellMat: THREE.Material, darkMat: THREE.Material, metalMat: THREE.Material): THREE.Group {
+function motorAssembly(
+  r: number,
+  h: number,
+  bellMat: THREE.Material,
+  darkMat: THREE.Material,
+  metalMat: THREE.Material,
+): THREE.Group {
   const g = new THREE.Group();
   const base = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.95, r * 0.95, h * 0.25, 24), darkMat);
   base.position.y = h * 0.125;
@@ -212,7 +231,10 @@ function motorAssembly(r: number, h: number, bellMat: THREE.Material, darkMat: T
   const bell = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), bellMat);
   g.add(bell);
   // Exposed windings band
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.985, r * 0.985, h * 0.12, 24, 1, true), new THREE.MeshStandardMaterial({ color: '#b5651d', metalness: 0.6, roughness: 0.4 }));
+  const band = new THREE.Mesh(
+    new THREE.CylinderGeometry(r * 0.985, r * 0.985, h * 0.12, 24, 1, true),
+    new THREE.MeshStandardMaterial({ color: '#b5651d', metalness: 0.6, roughness: 0.4 }),
+  );
   band.position.y = h * 0.22;
   g.add(band);
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.12, r * 0.12, h * 0.5, 10), metalMat);
@@ -246,14 +268,28 @@ export function buildQuadModel(
   const ducted = !!style.ducted;
   const whoop = style.style === 'whoop';
 
-  const carbon = new THREE.MeshPhysicalMaterial({ map: carbonTexture(), color: style.frameColor === '#1b1c1f' ? '#ffffff' : style.frameColor, roughness: 0.45, metalness: 0.1, clearcoat: 0.4, clearcoatRoughness: 0.3 });
+  const carbon = new THREE.MeshPhysicalMaterial({
+    map: carbonTexture(),
+    color: style.frameColor === '#1b1c1f' ? '#ffffff' : style.frameColor,
+    roughness: 0.45,
+    metalness: 0.1,
+    clearcoat: 0.4,
+    clearcoatRoughness: 0.3,
+  });
   const plastic = new THREE.MeshStandardMaterial({ color: style.frameColor, roughness: 0.6 });
   const accent = new THREE.MeshStandardMaterial({ color: style.accent, roughness: 0.55 });
   const tpu = new THREE.MeshStandardMaterial({ color: style.accent, roughness: 0.85 });
   const dark = new THREE.MeshStandardMaterial({ color: '#0d0d0d', roughness: 0.5, metalness: 0.3 });
   const metal = new THREE.MeshStandardMaterial({ color: '#a8a8a8', roughness: 0.25, metalness: 0.9 });
   const bellMat = new THREE.MeshStandardMaterial({ color: style.accent, roughness: 0.35, metalness: 0.7 });
-  const propMat = new THREE.MeshPhysicalMaterial({ color: style.propColor, roughness: 0.35, transparent: true, opacity: 0.88, side: THREE.DoubleSide, clearcoat: 0.6 });
+  const propMat = new THREE.MeshPhysicalMaterial({
+    color: style.propColor,
+    roughness: 0.35,
+    transparent: true,
+    opacity: 0.88,
+    side: THREE.DoubleSide,
+    clearcoat: 0.6,
+  });
   const pcb = new THREE.MeshStandardMaterial({ color: '#1f3b24', roughness: 0.6 });
 
   const thick = whoop ? 0.0015 : Math.max(0.0025, 0.005 * sc);
@@ -263,7 +299,13 @@ export function buildQuadModel(
 
   // ── Frame ────────────────────────────────────────────────────────────────
   if (!whoop) {
-    const ARM_WIDTH: Record<string, number> = { freestyle: 0.016, race: 0.012, toothpick: 0.0075, cinewhoop: 0.012, longrange: 0.018 };
+    const ARM_WIDTH: Record<string, number> = {
+      freestyle: 0.016,
+      race: 0.012,
+      toothpick: 0.0075,
+      cinewhoop: 0.012,
+      longrange: 0.018,
+    };
     const armW = (ARM_WIDTH[style.style] ?? 0.014) * Math.max(0.7, sc);
     for (const mp of motors) {
       const L = armDiag;
@@ -275,7 +317,9 @@ export function buildQuadModel(
       sh.lineTo(0, -armW / 2);
       if (armW > 0.009) {
         const slot = new THREE.Path();
-        const s0 = L * 0.35, s1 = L * 0.7, sw = armW * 0.18;
+        const s0 = L * 0.35,
+          s1 = L * 0.7,
+          sw = armW * 0.18;
         slot.moveTo(s0, -sw);
         slot.lineTo(s1, -sw);
         slot.absarc(s1, 0, sw, -Math.PI / 2, Math.PI / 2, false);
@@ -290,7 +334,14 @@ export function buildQuadModel(
         hp.absarc(L + Math.cos(a) * motorR * 0.6, Math.sin(a) * motorR * 0.6, motorR * 0.08, 0, Math.PI * 2, true);
         sh.holes.push(hp);
       }
-      const geo = new THREE.ExtrudeGeometry(sh, { depth: thick, bevelEnabled: true, bevelThickness: 0.0004, bevelSize: 0.0004, bevelSegments: 2, curveSegments: 16 });
+      const geo = new THREE.ExtrudeGeometry(sh, {
+        depth: thick,
+        bevelEnabled: true,
+        bevelThickness: 0.0004,
+        bevelSize: 0.0004,
+        bevelSegments: 2,
+        curveSegments: 16,
+      });
       geo.rotateX(-Math.PI / 2); // extrude upward, shape in XZ (shape y → -z)
       const arm = new THREE.Mesh(geo, carbon);
       arm.rotation.y = Math.atan2(-mp.z, mp.x);
@@ -298,7 +349,8 @@ export function buildQuadModel(
       root.add(arm);
     }
     // centre plates
-    const plateW = 0.034 * sc, plateL = 0.09 * sc;
+    const plateW = 0.034 * sc,
+      plateL = 0.09 * sc;
     const plate = (y: number, t: number) => {
       const g = new RoundedBoxGeometry(plateW * 1.4, t, plateL, 2, Math.min(t / 2, 0.002));
       const m = new THREE.Mesh(g, carbon);
@@ -309,7 +361,12 @@ export function buildQuadModel(
     plate(0, thick);
     const standoffH = (style.style === 'race' ? 0.022 : 0.03) * Math.max(0.6, sc);
     plate(thick + standoffH, thick * 0.4);
-    for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    for (const [x, z] of [
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ]) {
       const so = new THREE.Mesh(new THREE.CylinderGeometry(0.0025 * sc, 0.0025 * sc, standoffH, 8), accent);
       so.position.set(x * plateW * 0.6, thick + standoffH / 2, z * plateL * 0.42);
       root.add(so);
@@ -352,7 +409,14 @@ export function buildQuadModel(
 
   // ── Motors, props, ducts ────────────────────────────────────────────────
   const propGroups: PropAnim[] = [];
-  const blurMat = new THREE.MeshBasicMaterial({ map: propBlurTexture(), color: style.propColor, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+  const blurMat = new THREE.MeshBasicMaterial({
+    map: propBlurTexture(),
+    color: style.propColor,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
   MOTOR_LAYOUT.forEach((m, i) => {
     const mp = motors[i];
     const motor = motorAssembly(motorR, motorH, bellMat, dark, metal);
@@ -375,7 +439,15 @@ export function buildQuadModel(
     }
     // motor wires along the arm
     if (!whoop) {
-      const w = tube([[mp.x * 0.85, thick + 0.002, mp.z * 0.85], [mp.x * 0.5, thick + 0.003, mp.z * 0.5], [mp.x * 0.2, thick + 0.006 * sc, mp.z * 0.2]], 0.0012 * sc, dark);
+      const w = tube(
+        [
+          [mp.x * 0.85, thick + 0.002, mp.z * 0.85],
+          [mp.x * 0.5, thick + 0.003, mp.z * 0.5],
+          [mp.x * 0.2, thick + 0.006 * sc, mp.z * 0.2],
+        ],
+        0.0012 * sc,
+        dark,
+      );
       root.add(w);
     }
   });
@@ -389,7 +461,10 @@ export function buildQuadModel(
   lens.rotation.x = Math.PI / 2;
   lens.position.z = -camSize * 0.65;
   camGroup.add(lens);
-  const glass = new THREE.Mesh(new THREE.CircleGeometry(camSize * 0.26, 24), new THREE.MeshPhysicalMaterial({ color: '#112244', roughness: 0.05, metalness: 0.2, clearcoat: 1 }));
+  const glass = new THREE.Mesh(
+    new THREE.CircleGeometry(camSize * 0.26, 24),
+    new THREE.MeshPhysicalMaterial({ color: '#112244', roughness: 0.05, metalness: 0.2, clearcoat: 1 }),
+  );
   glass.position.z = -camSize * 0.91;
   glass.rotation.y = Math.PI;
   camGroup.add(glass);
@@ -406,7 +481,9 @@ export function buildQuadModel(
 
   // ── Battery + strap + lead ──────────────────────────────────────────────
   if (!whoop) {
-    const bw = 0.035 * sc, bh = 0.034 * sc, bl = 0.075 * sc;
+    const bw = 0.035 * sc,
+      bh = 0.034 * sc,
+      bl = 0.075 * sc;
     const cells = physics.cells;
     const label = labelTexture([`${cells}S ${physics.capacityMah}mAh`, 'LiPo 120C'], style.accent);
     const battMat = new THREE.MeshStandardMaterial({ map: label, roughness: 0.55 });
@@ -415,22 +492,56 @@ export function buildQuadModel(
     batt.position.y = top + bh / 2;
     batt.castShadow = true;
     root.add(batt);
-    const strap = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.002, bh + 0.002, 0.014 * sc), new THREE.MeshStandardMaterial({ color: '#111', roughness: 0.9 }));
+    const strap = new THREE.Mesh(
+      new THREE.BoxGeometry(bw + 0.002, bh + 0.002, 0.014 * sc),
+      new THREE.MeshStandardMaterial({ color: '#111', roughness: 0.9 }),
+    );
     strap.position.copy(batt.position);
     root.add(strap);
     const red = new THREE.MeshStandardMaterial({ color: '#c01818', roughness: 0.5 });
     const blk = new THREE.MeshStandardMaterial({ color: '#111', roughness: 0.5 });
     const yel = new THREE.MeshStandardMaterial({ color: '#e8c300', roughness: 0.5 });
-    root.add(tube([[0.004, top + bh * 0.3, bl / 2], [0.006, top + bh * 0.2, bl / 2 + 0.012 * sc], [0.004, top - 0.004, bl / 2 + 0.02 * sc]], 0.0016 * sc, red));
-    root.add(tube([[-0.004, top + bh * 0.3, bl / 2], [-0.006, top + bh * 0.2, bl / 2 + 0.012 * sc], [-0.004, top - 0.004, bl / 2 + 0.02 * sc]], 0.0016 * sc, blk));
+    root.add(
+      tube(
+        [
+          [0.004, top + bh * 0.3, bl / 2],
+          [0.006, top + bh * 0.2, bl / 2 + 0.012 * sc],
+          [0.004, top - 0.004, bl / 2 + 0.02 * sc],
+        ],
+        0.0016 * sc,
+        red,
+      ),
+    );
+    root.add(
+      tube(
+        [
+          [-0.004, top + bh * 0.3, bl / 2],
+          [-0.006, top + bh * 0.2, bl / 2 + 0.012 * sc],
+          [-0.004, top - 0.004, bl / 2 + 0.02 * sc],
+        ],
+        0.0016 * sc,
+        blk,
+      ),
+    );
     const xt = new THREE.Mesh(new THREE.BoxGeometry(0.016 * sc, 0.008 * sc, 0.01 * sc), yel);
     xt.position.set(0, top - 0.006, bl / 2 + 0.024 * sc);
     root.add(xt);
 
     // VTX antenna
-    const ant = tube([[0, thick + 0.01 * sc, 0.045 * sc], [0, thick + 0.03 * sc, 0.06 * sc], [0, thick + 0.05 * sc, 0.07 * sc]], 0.0012 * sc, dark);
+    const ant = tube(
+      [
+        [0, thick + 0.01 * sc, 0.045 * sc],
+        [0, thick + 0.03 * sc, 0.06 * sc],
+        [0, thick + 0.05 * sc, 0.07 * sc],
+      ],
+      0.0012 * sc,
+      dark,
+    );
     root.add(ant);
-    const lolli = new THREE.Mesh(new THREE.SphereGeometry(0.006 * sc, 16, 10), new THREE.MeshStandardMaterial({ color: style.accent, roughness: 0.4 }));
+    const lolli = new THREE.Mesh(
+      new THREE.SphereGeometry(0.006 * sc, 16, 10),
+      new THREE.MeshStandardMaterial({ color: style.accent, roughness: 0.4 }),
+    );
     lolli.scale.y = 0.6;
     lolli.position.set(0, thick + 0.054 * sc, 0.072 * sc);
     root.add(lolli);
@@ -438,12 +549,18 @@ export function buildQuadModel(
       const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.0015, 0.0015, 0.03, 8), dark);
       mast.position.set(0, top + bh + 0.015, -0.01);
       root.add(mast);
-      const gps = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.004, 24), new THREE.MeshStandardMaterial({ color: '#d8d8d8', roughness: 0.4 }));
+      const gps = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 0.004, 24),
+        new THREE.MeshStandardMaterial({ color: '#d8d8d8', roughness: 0.4 }),
+      );
       gps.position.set(0, top + bh + 0.032, -0.01);
       root.add(gps);
     }
   } else {
-    const batt = new THREE.Mesh(new RoundedBoxGeometry(0.01, 0.006, 0.03, 2, 0.002), new THREE.MeshStandardMaterial({ color: '#3a6fd8', roughness: 0.5 }));
+    const batt = new THREE.Mesh(
+      new RoundedBoxGeometry(0.01, 0.006, 0.03, 2, 0.002),
+      new THREE.MeshStandardMaterial({ color: '#3a6fd8', roughness: 0.5 }),
+    );
     batt.position.y = -0.003;
     root.add(batt);
   }

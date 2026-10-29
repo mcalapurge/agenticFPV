@@ -18,7 +18,15 @@ export function gpuLabel(name: string): string {
 export function detectGpu(renderer: WebGLRenderer): GpuInfo {
   const gl = renderer.getContext();
   const ext = gl.getExtension('WEBGL_debug_renderer_info');
-  const name = String((ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) || 'unknown');
+  const name = String(
+    (ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) || 'unknown',
+  );
   const vendor = String((ext && gl.getParameter(ext.UNMASKED_VENDOR_WEBGL)) || gl.getParameter(gl.VENDOR) || 'unknown');
-  return { name, vendor, label: gpuLabel(name), software: isSoftwareRenderer(name, vendor), webgl2: renderer.capabilities.isWebGL2 };
+  return {
+    name,
+    vendor,
+    label: gpuLabel(name),
+    software: isSoftwareRenderer(name, vendor),
+    webgl2: renderer.capabilities.isWebGL2,
+  };
 }

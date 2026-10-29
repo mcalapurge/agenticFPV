@@ -40,7 +40,10 @@ describe('tracks', () => {
   );
 
   it('skips corrupt stored user tracks and falls back for unknown ids', () => {
-    localStorage.setItem('agenticfpv.tracks.v1', JSON.stringify([{ id: 'u1', gates: [{ p: [0, 2, 0] }] }, { id: 'bad' }, 5]));
+    localStorage.setItem(
+      'agenticfpv.tracks.v1',
+      JSON.stringify([{ id: 'u1', gates: [{ p: [0, 2, 0] }] }, { id: 'bad' }, 5]),
+    );
     expect(loadUserTracks().map((t) => t.id)).toEqual(['u1']);
     expect(findTrack('missing')).toBe(BUILTIN_TRACKS[0]);
   });

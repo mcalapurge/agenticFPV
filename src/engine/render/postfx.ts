@@ -128,7 +128,16 @@ export function computeVideoFx(video: Config['video'], cameraMode: CameraMode, s
   };
 }
 
-const FX_UNIFORMS = ['fisheye', 'chroma', 'vignette', 'staticAmt', 'breakup', 'scanlines', 'pixelate', 'digital'] as const;
+const FX_UNIFORMS = [
+  'fisheye',
+  'chroma',
+  'vignette',
+  'staticAmt',
+  'breakup',
+  'scanlines',
+  'pixelate',
+  'digital',
+] as const;
 
 export class PostFX {
   private readonly renderer: THREE.WebGLRenderer;

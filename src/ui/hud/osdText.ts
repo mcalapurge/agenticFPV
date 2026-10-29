@@ -11,7 +11,10 @@ export function osdText(sim: Simulator): Record<Slot, string> {
   const { quad, fc, state, hud, perf, gpu } = sim;
   const b = quad.battery;
   const cells = cfg.physics.cells;
-  const link = cfg.video.system === 'digital' ? `LQ ${(state.signal * 100).toFixed(0)}%` : `RSSI ${(state.signal * 99).toFixed(0)}`;
+  const link =
+    cfg.video.system === 'digital'
+      ? `LQ ${(state.signal * 100).toFixed(0)}%`
+      : `RSSI ${(state.signal * 99).toFixed(0)}`;
   return {
     tl: `${b.voltage.toFixed(1)}V  ${(b.voltage / cells).toFixed(2)}v\n${b.current.toFixed(0).padStart(3)}A ${b.usedMah.toFixed(0)}mAh\n${link}`,
     tr: `${fmtTime(state.flightTime)}\n${cfg.flight.mode === 'angle' ? 'ANGL' : 'ACRO'}`,

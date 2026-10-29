@@ -22,6 +22,7 @@ export interface QuadPreset {
   pid: Record<Axis, PidAxisConfig>;
 }
 
+// prettier-ignore
 export const QUAD_PRESETS = {
   freestyle5: {
     name: '5" Freestyle (6S)',

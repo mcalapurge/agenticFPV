@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CalibrationWizard, INPUT_PRESETS, normaliseAxis, WIZARD_STEPS, type PadSnapshot } from '../../src/engine/input/input';
+import {
+  CalibrationWizard,
+  INPUT_PRESETS,
+  normaliseAxis,
+  WIZARD_STEPS,
+  type PadSnapshot,
+} from '../../src/engine/input/input';
 
 const ch = (patch = {}) => ({ axis: 0, invert: false, min: -1, center: 0, max: 1, ...patch });
 
@@ -29,7 +35,10 @@ describe('normaliseAxis', () => {
 });
 
 /** Fake EdgeTX-style radio: axes roll, pitch, throttle, yaw, SA switch. */
-function pad(axes: Partial<Record<'roll' | 'pitch' | 'throttle' | 'yaw' | 'sa', number>> = {}, buttons: boolean[] = []): PadSnapshot {
+function pad(
+  axes: Partial<Record<'roll' | 'pitch' | 'throttle' | 'yaw' | 'sa', number>> = {},
+  buttons: boolean[] = [],
+): PadSnapshot {
   const a = { roll: 0.02, pitch: -0.01, throttle: -1, yaw: 0.03, sa: -1, ...axes };
   return { axes: [a.roll, a.pitch, a.throttle, a.yaw, a.sa], buttons: buttons.map((pressed) => ({ pressed })) };
 }
@@ -80,7 +89,13 @@ describe('CalibrationWizard', () => {
       return w.next(pad({}, [false, true]), skip);
     };
     const done = run(false);
-    expect(done.kind === 'done' && done.result.arm).toEqual({ type: 'button', index: 1, threshold: 0.5, invert: false, toggle: false });
+    expect(done.kind === 'done' && done.result.arm).toEqual({
+      type: 'button',
+      index: 1,
+      threshold: 0.5,
+      invert: false,
+      toggle: false,
+    });
     const skipped = run(true);
     expect(skipped.kind === 'done' && skipped.result.arm).toBeNull();
   });

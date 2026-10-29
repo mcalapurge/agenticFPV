@@ -136,7 +136,13 @@ export const RECIPES = {
     const stone = smooth(0.8, 0.9, agg);
     const h = fine * 0.4 + stone * 0.4 - cr * 0.7;
     const k = 0.2 + large * 0.12 + stone * 0.12 + (fine - 0.5) * 0.08 - cr * 0.09 + patch * 0.05;
-    return [h, mix(k, 0.22, weeds), mix(k, 0.3, weeds), mix(k * 0.97, 0.12, weeds), clamp01(0.88 + fine * 0.1 - stone * 0.15)];
+    return [
+      h,
+      mix(k, 0.22, weeds),
+      mix(k, 0.3, weeds),
+      mix(k * 0.97, 0.12, weeds),
+      clamp01(0.88 + fine * 0.1 - stone * 0.15),
+    ];
   },
   metal:
     (paint = '#6e4329', rusty = 0.6): Recipe =>
@@ -144,7 +150,8 @@ export const RECIPES = {
       const c = hex(paint);
       const corr = Math.sin(u * Math.PI * 2 * 12) * 0.5 + 0.5; // corrugation
       const rust =
-        smooth(1 - rusty * 0.55, 1 - rusty * 0.3, n.fbm(u, v, 4, 5)) + smooth(0.75, 0.9, n.fbm(u + 0.4, v * 0.3, 8, 3)) * 0.6;
+        smooth(1 - rusty * 0.55, 1 - rusty * 0.3, n.fbm(u, v, 4, 5)) +
+        smooth(0.75, 0.9, n.fbm(u + 0.4, v * 0.3, 8, 3)) * 0.6;
       const pit = n.fbm(u, v, 128, 2);
       const h = corr * 0.8 + pit * 0.1 * rust;
       const rr = clamp01(rust);

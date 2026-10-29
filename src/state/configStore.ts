@@ -4,7 +4,15 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist, subscribeWithSelector, type PersistStorage, type StorageValue } from 'zustand/middleware';
-import { DEFAULT_CONFIG, getPath, parseConfig, setPath, type Config, type ConfigPath, type PathValue } from './configSchema';
+import {
+  DEFAULT_CONFIG,
+  getPath,
+  parseConfig,
+  setPath,
+  type Config,
+  type ConfigPath,
+  type PathValue,
+} from './configSchema';
 
 export const STORAGE_KEY = 'agenticfpv.config.v2';
 const LEGACY_KEY = 'agenticfpv.config.v1'; // 0.1.x stored the bare config object here

@@ -7,7 +7,11 @@ import type { QuadView } from '../sim/quad';
 const POLE_PAIRS = 7; // typical 12N14P motor → electrical frequency = rpm/60 × 7
 
 /** Electrical whine and blade-pass frequencies (Hz) for a normalised motor speed. */
-export function motorFrequencies(speed: number, maxRpm: number, blades: number): { electrical: number; bladePass: number } {
+export function motorFrequencies(
+  speed: number,
+  maxRpm: number,
+  blades: number,
+): { electrical: number; bladePass: number } {
   const rpm = Math.max(300, Math.abs(speed) * maxRpm);
   return { electrical: (rpm / 60) * POLE_PAIRS, bladePass: (rpm / 60) * blades };
 }
@@ -147,7 +151,8 @@ export class MotorAudio {
   }
 
   dispose(): void {
-    for (const ev of ['pointerdown', 'keydown', 'gamepadconnected'] as const) window.removeEventListener(ev, this.start);
+    for (const ev of ['pointerdown', 'keydown', 'gamepadconnected'] as const)
+      window.removeEventListener(ev, this.start);
     void this.graph?.ctx.close();
     this.graph = null;
   }

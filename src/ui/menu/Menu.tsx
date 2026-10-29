@@ -20,7 +20,13 @@ export function Menu() {
           </h1>
           <nav className="tabs" role="tablist">
             {TABS.map((t) => (
-              <button key={t.id} role="tab" aria-selected={t.id === tab} className={t.id === tab ? 'active' : ''} onClick={() => setTab(t.id)}>
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={t.id === tab}
+                className={t.id === tab ? 'active' : ''}
+                onClick={() => setTab(t.id)}
+              >
                 {t.label}
               </button>
             ))}
@@ -30,10 +36,17 @@ export function Menu() {
           <Component key={active.id} />
         </div>
         <footer>
-          <button className="btn" disabled={!active.resets.length} onClick={() => useConfigStore.getState().reset(active.resets)}>
+          <button
+            className="btn"
+            disabled={!active.resets.length}
+            onClick={() => useConfigStore.getState().reset(active.resets)}
+          >
             Reset tab to defaults
           </button>
-          <button className="btn" onClick={() => downloadJson('agenticfpv-config.json', useConfigStore.getState().config)}>
+          <button
+            className="btn"
+            onClick={() => downloadJson('agenticfpv-config.json', useConfigStore.getState().config)}
+          >
             Export JSON
           </button>
           <button

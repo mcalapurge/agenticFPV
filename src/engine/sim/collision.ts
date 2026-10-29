@@ -62,7 +62,13 @@ export class CollisionWorld {
 
   addBox(center: Vector3, half: Vector3, quat?: Quaternion): Box {
     const q = quat ? quat.clone() : new Quaternion();
-    const box: Box = { center: center.clone(), half: half.clone(), quat: q, inv: q.clone().invert(), id: this.boxes.length };
+    const box: Box = {
+      center: center.clone(),
+      half: half.clone(),
+      quat: q,
+      inv: q.clone().invert(),
+      id: this.boxes.length,
+    };
     this.boxes.push(box);
     // World AABB of the oriented box.
     const axes = [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)].map((a) => a.applyQuaternion(q));

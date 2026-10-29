@@ -32,6 +32,7 @@ export interface TimeOfDayPreset {
   lamps: boolean;
 }
 
+// prettier-ignore
 export const TIME_OF_DAY: Record<TimeOfDay, TimeOfDayPreset> = {
   day: {
     label: 'Midday', elev: 58, azim: 215, sun: '#fff3e2', sunI: 3.0, hemiSky: '#d2e2f5', hemiGround: '#5d5547', hemiI: 0.75,
@@ -92,10 +93,14 @@ export class Environment {
         depthWrite: false,
         fog: false,
         uniforms: {
-          sunDir: { value: this.sunDir }, horizon: { value: this.horizon }, zenith: { value: this.zenith },
-          sunColor: { value: new THREE.Color() }, night: { value: 0 },
+          sunDir: { value: this.sunDir },
+          horizon: { value: this.horizon },
+          zenith: { value: this.zenith },
+          sunColor: { value: new THREE.Color() },
+          night: { value: 0 },
         },
-        vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+        vertexShader:
+          'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
         fragmentShader: `uniform vec3 sunDir; uniform vec3 horizon; uniform vec3 zenith; uniform vec3 sunColor; uniform float night; varying vec3 vDir;
           float hash(vec3 p){ p = fract(p*0.3183099+.1); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
           void main(){
@@ -200,9 +205,7 @@ export class Environment {
     this.sun.target.position.copy(focus);
     this.sky.position.copy(cameraPos);
     if (this.preset?.lamps && this.lamps.length) {
-      const sorted = this.lamps
-        .map((p) => [p, p.distanceToSquared(focus)] as const)
-        .sort((a, b) => a[1] - b[1]);
+      const sorted = this.lamps.map((p) => [p, p.distanceToSquared(focus)] as const).sort((a, b) => a[1] - b[1]);
       this.lampLights.forEach((l, i) => {
         const e = sorted[i];
         l.visible = !!e;
