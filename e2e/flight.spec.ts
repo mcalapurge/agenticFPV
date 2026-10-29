@@ -12,7 +12,12 @@ test('keyboard: arm, take off, reset', async ({ app }) => {
 
   await app.keyboard.press('x'); // throttle cut
   await app.keyboard.press('r');
-  await app.waitForFunction(() => !window.__fpv!.sim.state.armed && window.__fpv!.sim.quad.pos.y < 1);
+  // Back on the pad; the arm switch is still on with throttle low, so it re-arms like a switch-armed quad.
+  await app.waitForFunction(() => {
+    const { sim } = window.__fpv!;
+    return sim.quad.pos.distanceTo(sim.map.spawn.pos) < 0.5 && sim.state.flightTime < 1;
+  });
+  await app.keyboard.press('Space');
   await expect(app.getByTestId('osd-tc')).toHaveText('DISARMED');
 });
 
