@@ -202,6 +202,57 @@ export class CollisionWorld {
     return true;
   }
 
+  /**
+   * Nearest hit along a ray (ground plane included). Returns { t, normal } or null.
+   * Used for visual effects (prop-wash dust), so it favours speed over exhaustive traversal.
+   */
+  raycast(origin, dir, maxDist) {
+    let best = Infinity;
+    const normal = new Vector3();
+    if (this.ground && dir.y < -1e-6) {
+      const t = (this.groundY - origin.y) / dir.y;
+      if (t >= 0 && t <= maxDist) { best = t; normal.set(0, 1, 0); }
+    }
+    this._seen.clear();
+    const step = Math.min(CELL * 0.25, Math.max(0.25, maxDist));
+    for (let s = 0; s <= maxDist + step; s += step) {
+      const p = this._sp.copy(origin).addScaledVector(dir, Math.min(s, maxDist));
+      const cell = this.grid.get(`${Math.floor(p.x / CELL)},${Math.floor(p.y / CELL)},${Math.floor(p.z / CELL)}`);
+      if (!cell) continue;
+      for (const box of cell) {
+        if (this._seen.has(box.id)) continue;
+        this._seen.add(box.id);
+        const hit = this._rayBox(origin, dir, Math.min(best, maxDist), box);
+        if (hit !== null && hit.t < best) { best = hit.t; normal.copy(hit.n); }
+      }
+      if (s > best) break;
+    }
+    return best <= maxDist ? { t: best, normal } : null;
+  }
+
+  _rayBox(a, dir, maxT, b) {
+    const o = this._so.copy(a).sub(b.center).applyQuaternion(b.inv);
+    const d = this._sdl.copy(dir).applyQuaternion(b.inv);
+    let tmin = 0, tmax = maxT, axis = -1, sign = 0;
+    for (let k = 0; k < 3; k++) {
+      const ax = k === 0 ? 'x' : k === 1 ? 'y' : 'z';
+      const h = b.half[ax];
+      if (Math.abs(d[ax]) < 1e-9) {
+        if (Math.abs(o[ax]) > h) return null;
+      } else {
+        let t1 = (-h - o[ax]) / d[ax], t2 = (h - o[ax]) / d[ax];
+        let s1 = -1;
+        if (t1 > t2) { [t1, t2] = [t2, t1]; s1 = 1; }
+        if (t1 > tmin) { tmin = t1; axis = k; sign = s1; }
+        tmax = Math.min(tmax, t2);
+        if (tmin > tmax) return null;
+      }
+    }
+    if (axis < 0) return null; // origin inside the box
+    const n = new Vector3(axis === 0 ? sign : 0, axis === 1 ? sign : 0, axis === 2 ? sign : 0).applyQuaternion(b.quat);
+    return { t: tmin, n };
+  }
+
   /** Remove every box (used for dynamic layers like race gates). */
   clear() {
     this.boxes.length = 0;

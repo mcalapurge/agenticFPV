@@ -120,3 +120,9 @@ environment's network policy, so real photo textures are fetched by a script the
   llvmpipe, Microsoft Basic Render…) with fix instructions; GPU name in the Video tab; `F` toggles an OSD
   readout of FPS / frame time / physics ms / render-submit ms. Measured: physics ≈6–11 µs per 1 kHz step
   (~1% of one core for the player quad; 100 quads ≈18%), so physics stays on the CPU.
+- **Effects** Prop-wash dust as a GPU particle system (6k ring buffer; motion/fade in the vertex shader, CPU only
+  writes spawns). Wash direction follows body -up; collision raycast finds ground/slab/roof within ~2–4 prop
+  diameters; strength ∝ thrust × proximity²; grass clippings over grass patches; crash debris bursts. Grass:
+  shader-patched instanced cards (weeds + new dense tall grass on patches) sway with wind and push/flatten/flutter
+  under the wash. Verified: raycast unit test; patched shader compiled on both grass meshes; forced-wash diff
+  confined to the wash radius; screenshots over asphalt/grass/impact.

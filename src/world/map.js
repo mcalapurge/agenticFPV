@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { rand, rr, setSeed, grassAlphaTexture, graffitiTexture, weedsTexture, chainLinkTexture } from './textures.js';
 import { buildMaterials } from './pbr.js';
+import { patchGrassMaterial } from '../render/grassWind.js';
 
 const TEX_SCALE = 4; // metres per texture tile
 
@@ -341,9 +342,9 @@ function streetLamps(b, scene) {
   return { positions, meshes: [heads] };
 }
 
-function weeds(scene) {
+function weeds(scene, grassPatches) {
   const tex = weedsTexture();
-  const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1 });
+  const mat = patchGrassMaterial(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1 }), 0.7);
   const g1 = new THREE.PlaneGeometry(1, 0.7);
   g1.translate(0, 0.35, 0);
   const g2 = g1.clone().rotateY(Math.PI / 2);
@@ -370,6 +371,24 @@ function weeds(scene) {
   inst.count = k;
   inst.receiveShadow = true;
   scene.add(inst);
+
+  // Dense tall grass filling the grass patches (reacts to prop wash).
+  const tall = [];
+  for (const p of grassPatches) {
+    const n = Math.min(260, Math.round(p.r * p.r * 2.2));
+    for (let i = 0; i < n; i++) {
+      const a = rand() * Math.PI * 2, r = Math.sqrt(rand()) * p.r * 0.95;
+      tall.push([p.x + Math.cos(a) * r, p.z + Math.sin(a) * r, rr(0.5, 1.25) * (1 - (r / p.r) * 0.45)]);
+    }
+  }
+  const grass = new THREE.InstancedMesh(geo, mat, tall.length);
+  tall.forEach(([x, z, s], i) => {
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI);
+    m.compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(s * rr(0.8, 1.3), s * rr(0.8, 1.4), s));
+    grass.setMatrixAt(i, m);
+  });
+  grass.receiveShadow = true;
+  scene.add(grass);
 }
 
 function container(b, x, z, y, ry, mat) {
@@ -396,6 +415,7 @@ export async function buildMap(scene, collision, renderer, progress = () => {}) 
 
   const grassTex = grassAlphaTexture();
   const grassMat = new THREE.MeshStandardMaterial({ map: grassTex, transparent: true, depthWrite: false, roughness: 1 });
+  const grassPatches = [];
   for (let i = 0; i < 45; i++) {
     const s = rr(8, 30);
     const g = new THREE.Mesh(new THREE.PlaneGeometry(s, s), grassMat);
@@ -403,6 +423,8 @@ export async function buildMap(scene, collision, renderer, progress = () => {}) 
     g.position.set(rr(-140, 140), 0.02 + i * 0.001, rr(-140, 140));
     g.receiveShadow = true;
     scene.add(g);
+    // keep the launch pad clear of tall grass
+    if (Math.hypot(g.position.x, g.position.z - 60) > s * 0.35 + 4) grassPatches.push({ x: g.position.x, z: g.position.z, r: s * 0.32 });
   }
 
   // ── A: Concrete skeleton (5 floors, collapsing slabs) ────────────────────
@@ -597,7 +619,7 @@ export async function buildMap(scene, collision, renderer, progress = () => {}) 
 
   const lamps = streetLamps(b, scene);
   b.finish(scene);
-  weeds(scene);
+  weeds(scene, grassPatches);
   placeGraffiti(scene);
 
   return {
@@ -605,5 +627,6 @@ export async function buildMap(scene, collision, renderer, progress = () => {}) 
     materials,
     textureSource: source,
     lamps,
+    grassPatches,
   };
 }

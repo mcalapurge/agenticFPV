@@ -120,3 +120,16 @@ test('wind pushes a self-levelling quad downwind', () => {
   console.log(`wind drift vz=${sim.quad.vel.z.toFixed(2)}`);
   assert.ok(sim.quad.vel.z > 1, `vz ${sim.quad.vel.z}`);
 });
+
+test('collision raycast hits the ground and the top face of a box', () => {
+  const world = new CollisionWorld();
+  world.addBox(new Vector3(5, 1, 0), new Vector3(1, 1, 1));
+  const down = new Vector3(0, -1, 0);
+  const g = world.raycast(new Vector3(0, 3, 0), down, 5);
+  assert.ok(g && Math.abs(g.t - 3) < 1e-9 && g.normal.y === 1, 'ground hit');
+  const b = world.raycast(new Vector3(5, 3, 0), down, 5);
+  assert.ok(b && Math.abs(b.t - 1) < 1e-9 && Math.abs(b.normal.y - 1) < 1e-9, `box top hit ${JSON.stringify(b)}`);
+  const side = world.raycast(new Vector3(0, 1, 0), new Vector3(1, 0, 0), 10);
+  assert.ok(side && Math.abs(side.t - 4) < 1e-9 && Math.abs(side.normal.x + 1) < 1e-9, `side hit ${JSON.stringify(side)}`);
+  assert.equal(world.raycast(new Vector3(0, 3, 0), down, 2), null);
+});

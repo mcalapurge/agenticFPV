@@ -40,6 +40,7 @@ export class Environment {
     this.pmrem = new THREE.PMREMGenerator(renderer);
     this.envMaps = {};
     this.sunDir = new THREE.Vector3(0, 1, 0);
+    this.fxLight = 1;
     this.horizon = new THREE.Color();
     this.zenith = new THREE.Color();
     this.fogColor = new THREE.Color();
@@ -124,6 +125,8 @@ export class Environment {
   async apply(timeOfDay, { fog = true, shadows = true, ibl = true } = {}) {
     const p = TIME_OF_DAY[timeOfDay] || TIME_OF_DAY.golden;
     this.preset = p;
+    // Brightness for unlit effects (dust sprites) under this lighting.
+    this.fxLight = Math.min(1.1, Math.max(0.12, p.hemiI * 0.55 + p.sunI * 0.17));
     const el = (p.elev * Math.PI) / 180, az = (p.azim * Math.PI) / 180;
     this.sunDir.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)).normalize();
     this.horizon.set(p.horizon);

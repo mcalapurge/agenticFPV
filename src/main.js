@@ -13,6 +13,7 @@ import { MotorAudio } from './audio/motorAudio.js';
 import { Environment } from './render/environment.js';
 import { PostFX } from './render/postfx.js';
 import { detectGpu, gpuLabel } from './render/gpuInfo.js';
+import { PropWashEffects } from './render/propwash.js';
 import { Game } from './game/game.js';
 import { Replay } from './game/replay.js';
 
@@ -41,6 +42,7 @@ const loadingEl = document.getElementById('loading');
 const map = await buildMap(scene, collision, renderer, (msg) => (loadingEl.textContent = msg));
 const spawn = map.spawn;
 if (map.lamps) env.setLamps(map.lamps.positions, map.lamps.meshes);
+const effects = new PropWashEffects(scene, collision, map.grassPatches);
 
 // ── Quad model ───────────────────────────────────────────────────────────
 let quadModel = null;
@@ -324,6 +326,7 @@ function frame(now) {
       fc.armed = false;
     }
     if (quad.lastImpact > 0.8) audio.impact(quad.lastImpact);
+    if (quad.lastImpact > 2.5) effects.impact(quad.pos, quad.lastImpact);
     quad.lastImpact = 0;
     game.update(frameDt, quad, prevPos, rc);
     prevPos.copy(quad.pos);
@@ -340,6 +343,8 @@ function frame(now) {
   updateCamera(frameDt, subject);
   env.update(subject.pos, camera.position);
   updateSignal(frameDt, subject);
+  effects.enabled = config.graphics.effects;
+  effects.update(paused && !replay.active ? 0 : frameDt * (replay.active ? replay.speed * (replay.playing ? 1 : 0) : 1), subject, config.physics, camera, env.fxLight, quad.wind);
   const preset = QUAD_PRESETS[config.quad.preset] || QUAD_PRESETS.freestyle5;
   audio.update(subject, config.camera.mode === 'fpv' ? 0 : camera.position.distanceTo(subject.pos), menu.isOpen || (replay.active && !replay.playing), preset.model.blades);
 
@@ -369,6 +374,6 @@ requestAnimationFrame(frame);
 
 // Expose for debugging / automated smoke tests.
 window.__fpv = {
-  audio, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, renderer, gpu, perf, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad, textureSource: map.textureSource,
+  audio, effects, config, quad, fc, state, input, menu, collision, scene, camera, game, replay, env, renderer, gpu, perf, rebuildQuadModel, applyConfig, applyEnvironment, resetQuad, textureSource: map.textureSource,
   get quadModel() { return quadModel; },
 };

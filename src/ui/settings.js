@@ -108,6 +108,7 @@ const SCHEMA = {
     ] },
     { title: 'Graphics', fields: [
       { path: 'graphics.ibl', label: 'HDRI lighting (IBL)', type: 'bool' },
+      { path: 'graphics.effects', label: 'Prop-wash dust & grass', type: 'bool' },
       { path: 'graphics.shadows', label: 'Shadows', type: 'bool' },
       { path: 'graphics.fog', label: 'Fog / haze', type: 'bool' },
       { path: 'graphics.pixelRatio', label: 'Render scale', min: 0.5, max: 2, step: 0.25 },

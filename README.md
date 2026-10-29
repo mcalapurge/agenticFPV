@@ -71,6 +71,7 @@ go to **Settings → Pages → Source: GitHub Actions**.
 | **Audio** | WebAudio synthesis driven by simulated rpm: motor whine, blade-pass tones, prop noise, prop-wash flutter, wind rush, impacts. |
 | **Video** | Fisheye lens, chromatic aberration, vignette. The analog link gets static and breakup; the digital HD link gets blocking and freezes. Both depend on distance and on the number of walls between you and the quad. VTX power is selectable. The OSD shows RSSI or LQ. |
 | **Environment** | Midday, golden hour, overcast, dusk and night (with street lamps). Lighting uses CC0 Poly Haven HDRIs. |
+| **Effects** | GPU particle prop-wash dust that kicks up off the ground, slabs and roofs (grass clippings over grass), crash debris bursts, and instanced grass that sways in the wind and flattens and flutters under the prop wash. |
 | **Cameras** | FPV (FOV and uptilt adjustable), chase, line of sight, orbit. |
 
 ## Controllers

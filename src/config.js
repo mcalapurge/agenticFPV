@@ -112,6 +112,7 @@ export const DEFAULT_CONFIG = {
   graphics: {
     timeOfDay: 'golden',
     ibl: true,
+    effects: true, // prop-wash dust, crash debris, grass reacting to wash
     shadows: true,
     pixelRatio: 1,
     fog: true,
