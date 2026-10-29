@@ -221,3 +221,9 @@ export function setPath<P extends ConfigPath>(obj: Config, path: P, value: PathV
   const parent = keys.reduce<Record<string, unknown>>((o, k) => o[k] as Record<string, unknown>, obj as never);
   parent[last] = value;
 }
+
+/** Leaf paths whose value type is `V` (used to type settings-field definitions). */
+export type LeafPathOf<V> = { [P in ConfigLeafPath]: PathValue<Config, P> extends V ? P : never }[ConfigLeafPath];
+export type NumberPath = LeafPathOf<number>;
+export type BooleanPath = LeafPathOf<boolean>;
+export type StringPath = LeafPathOf<string>;

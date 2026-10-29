@@ -152,7 +152,10 @@ function bladeGeometry(
     }
   // tip cap
   const base = spanSeg * foilPts;
-  for (let i = 1; i < foilPts - 1; i++) mirror ? idx.push(base, base + i, base + i + 1) : idx.push(base, base + i + 1, base + i);
+  for (let i = 1; i < foilPts - 1; i++) {
+    if (mirror) idx.push(base, base + i, base + i + 1);
+    else idx.push(base, base + i + 1, base + i);
+  }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setIndex(idx);
