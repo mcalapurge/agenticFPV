@@ -6,7 +6,8 @@ import { expect, openMenu, test } from './fixtures';
 const TABS = ['Race', 'Quad', 'Controller', 'Rates', 'PIDs', 'Filters', 'Physics', 'Video, Env & Audio', 'Help'];
 
 test.beforeEach(async ({ app }) => {
-  // Freeze everything that isn't the menu: the live 3D view, the GPU banner and toasts.
+  // Freeze everything that isn't the menu: stop the render loop and hide the 3D view, GPU banner and toasts.
+  await app.evaluate(() => window.__fpv!.sim.stop());
   await app.addStyleTag({ content: '#view, #gpuwarn, #toast, #osd, #sticks { visibility: hidden !important; }' });
   await openMenu(app);
 });

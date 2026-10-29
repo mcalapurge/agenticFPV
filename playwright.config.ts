@@ -7,7 +7,8 @@ const PORT = 4173;
 export default defineConfig({
   testDir: './e2e',
   timeout: 180_000,
-  expect: { timeout: 30_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
+  // Screenshots are deterministic per platform (SwiftShader, stopped render loop): allow only a few pixels.
+  expect: { timeout: 30_000, toHaveScreenshot: { maxDiffPixels: 20 } },
   // Software WebGL is CPU-heavy: one browser at a time keeps timings sane.
   workers: 1,
   fullyParallel: false,

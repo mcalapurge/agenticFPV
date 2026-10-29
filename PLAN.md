@@ -137,3 +137,13 @@ environment's network policy, so real photo textures are fetched by a script the
   shader-patched instanced cards (weeds + new dense tall grass on patches) sway with wind and push/flatten/flutter
   under the wash. Verified: raycast unit test; patched shader compiled on both grass meshes; forced-wash diff
   confined to the wash radius; screenshots over asphalt/grass/impact.
+- **M15–M19 TypeScript + modern stack** (branch `claude/typescript-modernization`). Whole codebase in strict
+  TypeScript; Zod config schema (type, defaults, forgiving validation, clamping, v1 settings migration);
+  Zustand + Immer stores; engine as a `Simulator` class with pure `RaceSession` / `CalibrationWizard` /
+  video-link / audio helpers; React 19 settings menu and HUD (per-frame values via refs). Tests: Vitest
+  177 (unit: physics + every preset, race logic, replay, input, config, CLI import, collision, PBR tiling;
+  component: fields, tabs, CLI import, calibration wizard on a fake pad, overlays) in ~6 s; Playwright 19
+  end-to-end (boot, flight, crash, settings → engine → reload, race with gates crossed through the real
+  loop, practice PB/ghost, track editor, replay) on SwiftShader in ~11 min; 9 visual baselines (settings
+  tabs, ≤20 px tolerance, mutation-checked). Found and fixed: throttle-cut tap lost between polls at low
+  frame rates. CI workflow runs typecheck, lint, format, Vitest + coverage, build and the e2e suite.

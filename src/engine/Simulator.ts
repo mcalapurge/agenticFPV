@@ -186,8 +186,13 @@ export class Simulator {
     this.raf = requestAnimationFrame(loop);
   }
 
-  dispose(): void {
+  /** Stop the render/physics loop (the scene stays as last drawn). `start()` resumes. */
+  stop(): void {
     cancelAnimationFrame(this.raf);
+  }
+
+  dispose(): void {
+    this.stop();
     this.cleanups.forEach((f) => f());
     this.input.dispose();
     this.audio.dispose();
