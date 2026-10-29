@@ -46,15 +46,12 @@ test('practice: lap timing, PB and ghost', async ({ app }) => {
 });
 
 test('switching tracks moves the gates', async ({ app }) => {
-  await app.keyboard.press('Escape');
-  const first = await app.evaluate(() => window.__fpv!.sim.game.gates.length);
+  await openMenu(app);
+  const gatePositions = () => app.evaluate(() => window.__fpv!.sim.game.gates.map((g) => g.c.toArray()));
+  const before = await gatePositions();
   await app.getByTestId('track-warehouse').getByRole('button', { name: 'Select' }).click();
   await expect(app.getByTestId('track-warehouse')).toHaveClass(/active/);
-  const now = await app.evaluate(() => ({
-    id: window.__fpv!.sim.game.track.id,
-    n: window.__fpv!.sim.game.gates.length,
-  }));
-  expect(now.id).toBe('warehouse');
-  expect(now.n).not.toBe(first);
+  expect(await app.evaluate(() => window.__fpv!.sim.game.track.id)).toBe('warehouse');
+  expect(await gatePositions()).not.toEqual(before);
   expect(await app.evaluate(() => window.__fpv!.config().game.mode)).toBe('practice');
 });
