@@ -2,9 +2,11 @@
 
 import { Quaternion, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
+import { demoSimConfig, pilotVehicle } from '../../src/engine/demo/demoConfig';
 import { DemoPilot, type PilotCommand, type Waypoint } from '../../src/engine/demo/demoPilot';
 import { DEMO_ROUTE } from '../../src/engine/demo/demoRoute';
 import { CollisionWorld } from '../../src/engine/sim/collision';
+import { QUAD_PRESETS } from '../../src/engine/sim/presets';
 import { DEFAULT_CONFIG } from '../../src/state/configSchema';
 import { DT, makeSim, upY } from './helpers/sim';
 
@@ -17,15 +19,22 @@ interface Flight {
 }
 
 /** Fly `seconds` of demo from the pad; returns what happened. */
-function fly(seconds: number, route: readonly Waypoint[] = DEMO_ROUTE, world = new CollisionWorld()): Flight {
-  const sim = makeSim((c) => {
-    // The same stock tune the app uses for demo flights.
-    c.physics = { ...DEFAULT_CONFIG.physics, battery: false, crashEnabled: false };
-  });
+function fly(
+  seconds: number,
+  route: readonly Waypoint[] = DEMO_ROUTE,
+  world = new CollisionWorld(),
+  preset = DEFAULT_CONFIG.quad.preset,
+): Flight {
+  // Exactly the config the app flies the demo on.
+  const user = structuredClone(DEFAULT_CONFIG);
+  user.quad.preset = preset;
+  const demoCfg = demoSimConfig(user);
+  const sim = makeSim((c) => Object.assign(c, demoCfg));
   sim.collide = (q) => void world.resolveQuad(q, sim.cfg.physics);
   sim.quad.reset(PAD, 0);
   sim.fc.armed = false;
   const pilot = new DemoPilot({ route, probe: (o, d, m) => world.raycast(o, d, m)?.t ?? null });
+  pilot.setVehicle(pilotVehicle(demoCfg));
   const samples: Flight['samples'] = [];
   const impacts: Flight['impacts'] = [];
   const frame = 0.016;
@@ -178,5 +187,19 @@ describe('safety', () => {
     expect(pilot.phase).toBe('trick');
     expect(pilot.stats.tricks.flip).toBe(1);
     expect(cmd.camera).toBe('orbit');
+  });
+});
+
+describe.each(Object.keys(QUAD_PRESETS))('quad class %s', (preset) => {
+  it('flies the demo: no crashes after launch, stays up, keeps moving through the route', () => {
+    const f = fly(150, DEMO_ROUTE, new CollisionWorld(), preset);
+    const info = `${preset}: idx=${f.pilot.index} laps=${f.pilot.stats.laps} tricks=${JSON.stringify(f.pilot.stats.tricks)} impacts=${JSON.stringify(f.impacts.filter((i) => i.t > 3).slice(0, 3))} minY=${Math.min(...f.samples.filter((s) => s.t > 6).map((s) => s.pos.y)).toFixed(1)}`;
+    expect(
+      f.impacts.filter((i) => i.t > 3),
+      info,
+    ).toEqual([]);
+    expect(Math.min(...f.samples.filter((s) => s.t > 6).map((s) => s.pos.y)), info).toBeGreaterThan(3);
+    expect(f.pilot.stats.laps * 100 + f.pilot.index, info).toBeGreaterThan(8);
+    expect(Object.keys(f.pilot.stats.tricks).length, info).toBeGreaterThan(0);
   });
 });

@@ -74,24 +74,26 @@ test.describe('title menu', () => {
     expect(rc.after).toEqual({ arm: false, throttle: 0 });
   });
 
-  test('the demo always flies the stock tune, whatever the player has configured', async ({ titleApp: app }) => {
+  test('the demo flies the class you chose, on its stock tune, ignoring your personal edits', async ({
+    titleApp: app,
+  }) => {
     await app.evaluate(() =>
       window.__fpv!.update((c) => {
+        c.quad.preset = 'race5';
         c.pid.roll.p = 0;
         c.pid.pitch.p = 0;
-        c.quad.preset = 'whoop65';
         c.physics.massG = 1200;
       }),
     );
     const demo = await app.evaluate(() => {
       const { sim } = window.__fpv!;
       sim.advance(40);
-      return { p: sim.fc.config.pid.roll.p, mass: sim.quad.mass, y: sim.quad.pos.y, impacts: sim.stats.count };
+      return { p: sim.fc.config.pid.roll.p, mass: sim.quad.mass, y: sim.quad.pos.y };
     });
-    expect(demo.p).toBe(45);
-    expect(demo.mass).toBeCloseTo(0.65, 3);
+    expect(demo.p).toBe(48); // the race class's own stock tune, not the broken 0
+    expect(demo.mass).toBeCloseTo(0.52, 3); // the 5" race class, not the 1200 g edit
     expect(demo.y).toBeGreaterThan(5);
-    // …and flying yourself uses what you configured.
+    // …and flying yourself uses exactly what you configured.
     await app.getByRole('button', { name: /^Fly/ }).click();
     const mine = await app.evaluate(() => ({
       p: window.__fpv!.sim.fc.config.pid.roll.p,
@@ -99,6 +101,50 @@ test.describe('title menu', () => {
     }));
     expect(mine.p).toBe(0);
     expect(mine.mass).toBeCloseTo(1.2, 3);
+  });
+
+  test('choosing a quad class on the title screen changes the model, and the demo flies it', async ({
+    titleApp: app,
+  }) => {
+    await app.getByRole('button', { name: /Quad/ }).click();
+    const classes = [
+      ['race5', 0.52],
+      ['whoop65', 0.022],
+      ['longrange7', 0.98],
+      ['cinewhoop3', 0.33],
+    ] as const;
+    for (const [id, mass] of classes) {
+      const before = await app.evaluate(() => {
+        const w = window as unknown as { __model?: unknown };
+        w.__model = window.__fpv!.sim.quadModel;
+        return true;
+      });
+      expect(before).toBe(true);
+      await app.getByTestId(`preset-${id}`).click();
+      const after = await app.evaluate(() => {
+        const { sim } = window.__fpv!;
+        const w = window as unknown as { __model?: unknown };
+        return {
+          swapped: sim.quadModel !== w.__model,
+          mass: sim.quad.mass,
+          inScene: sim.scene.children.includes(sim.quadModel),
+        };
+      });
+      expect(after.swapped, `${id}: model replaced`).toBe(true);
+      expect(after.inScene, `${id}: new model is in the scene`).toBe(true);
+      expect(after.mass).toBeCloseTo(mass, 3);
+    }
+    // The last class (65 mm whoop… then cinewhoop) keeps flying the demo without a scratch.
+    await app.getByRole('button', { name: 'Back' }).click();
+    const flown = await app.evaluate(() => {
+      const { sim } = window.__fpv!;
+      sim.advance(8);
+      const base = sim.stats.count;
+      sim.advance(60);
+      return { impacts: sim.stats.count - base, y: sim.quad.pos.y };
+    });
+    expect(flown.impacts).toBe(0);
+    expect(flown.y).toBeGreaterThan(3);
   });
 });
 

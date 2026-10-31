@@ -2,10 +2,11 @@
 // UI lives in React; it talks to the engine through the stores and `onFrame` subscriptions.
 
 import * as THREE from 'three';
-import { CAMERA_MODES, DEFAULT_CONFIG, type CameraMode, type Config, type GameMode } from '../state/configSchema';
+import { CAMERA_MODES, type CameraMode, type Config, type GameMode } from '../state/configSchema';
 import { getConfig, useConfigStore } from '../state/configStore';
 import { useUiStore, type GpuInfo, type Screen } from '../state/uiStore';
 import { MotorAudio } from './audio/motorAudio';
+import { demoSimConfig, pilotVehicle } from './demo/demoConfig';
 import { DemoPilot } from './demo/demoPilot';
 import { DEMO_ROUTE } from './demo/demoRoute';
 import { Game } from './game/game';
@@ -24,17 +25,6 @@ import { buildQuadModel, type QuadModel } from './world/quadModel';
 
 export const DT = 1 / 1000; // physics + PID loop: 1 kHz
 const MAX_STEPS_PER_FRAME = 120;
-
-/** Demo flights always use the stock quad and tune, whatever the player has configured. */
-const demoSimConfig = (cfg: Config): Config => ({
-  ...cfg,
-  quad: DEFAULT_CONFIG.quad,
-  pid: DEFAULT_CONFIG.pid,
-  rates: DEFAULT_CONFIG.rates,
-  filters: DEFAULT_CONFIG.filters,
-  flight: DEFAULT_CONFIG.flight,
-  physics: { ...DEFAULT_CONFIG.physics, battery: false, crashEnabled: false, windSpeed: 2, windGust: 0.3 },
-});
 
 /** Impact counters (for the demo soak test and tooling). */
 export interface ImpactStats {
@@ -280,6 +270,7 @@ export class Simulator {
     const cfg = this.simConfig();
     this.fc.applyConfig(cfg);
     this.quad.applyConfig(cfg);
+    if (this.demoOn) this.pilot.setVehicle(pilotVehicle(cfg));
   }
 
   /** Any pad movement or button press on the demo screen hands control back to the title. */
@@ -322,8 +313,7 @@ export class Simulator {
 
   // ── Config ──────────────────────────────────────────────────────────────────
   private applyConfig(cfg: Config, prev: Config | null): void {
-    this.fc.applyConfig(this.simConfig(cfg));
-    this.quad.applyConfig(this.simConfig(cfg));
+    this.applySimConfig();
     this.input.config = cfg;
     this.audio.config = cfg;
     const changed = <K extends keyof Config>(k: K) => !prev || prev[k] !== cfg[k];

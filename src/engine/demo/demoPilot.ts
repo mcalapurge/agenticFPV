@@ -133,7 +133,8 @@ export class DemoPilot {
   private readonly route: readonly Waypoint[];
   private readonly rates: RateAxisConfig;
   private readonly angleLimit: number;
-  private readonly hover: number;
+  private hover: number;
+  private speedScale = 1;
   private readonly probe: Probe | null;
   private readonly rng: () => number;
 
@@ -171,6 +172,12 @@ export class DemoPilot {
     this.hover = opts.hoverThrottle ?? 0.34;
     this.probe = opts.probe ?? null;
     this.rng = mulberry32(opts.seed ?? 1);
+  }
+
+  /** Fit the pilot to the airframe being flown (hover throttle, cruise-speed scale). */
+  setVehicle(v: { hoverThrottle: number; speedScale: number }): void {
+    this.hover = v.hoverThrottle;
+    this.speedScale = v.speedScale;
   }
 
   /** Back to the pad: re-arm and start the route over. */
@@ -341,7 +348,7 @@ export class DemoPilot {
       const heading = Math.atan2(-vStar.x, -vStar.z);
       const err = Math.abs(wrapRad(heading - Math.atan2(-fwd.x, -fwd.z)));
       const turnScale = hd < 0.2 ? 1 : clamp(1 - err / Math.PI, 0.45, 1);
-      vStar.multiplyScalar(speed * turnScale);
+      vStar.multiplyScalar(speed * this.speedScale * turnScale);
       vStar.y = clamp(vStar.y, -9, 10);
     }
 

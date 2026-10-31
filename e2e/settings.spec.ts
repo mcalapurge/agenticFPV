@@ -31,7 +31,16 @@ test('Betaflight CLI import', async ({ app }) => {
 test('quad class rebuilds the model and physics', async ({ app }) => {
   await app.getByRole('tab', { name: 'Quad' }).click();
   const before = await app.evaluate(() => window.__fpv!.sim.quad.mass);
+  const modelBefore = await app.evaluate(() => {
+    (window as unknown as { __model?: unknown }).__model = window.__fpv!.sim.quadModel;
+    return true;
+  });
+  expect(modelBefore).toBe(true);
   await app.getByTestId('preset-cinewhoop3').click();
+  // In flight too: the 3D model is rebuilt (you see it in the chase and orbit cameras).
+  expect(
+    await app.evaluate(() => window.__fpv!.sim.quadModel !== (window as unknown as { __model?: unknown }).__model),
+  ).toBe(true);
   await expect(app.getByTestId('preset-cinewhoop3')).toHaveClass(/active/);
   await frames(app, 1);
   expect(await app.evaluate(() => window.__fpv!.sim.quad.mass)).toBeLessThan(before);
