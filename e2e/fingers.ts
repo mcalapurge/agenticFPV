@@ -16,9 +16,12 @@ export class Fingers {
     return new Fingers(await page.context().newCDPSession(page));
   }
 
-  private send(type: 'touchStart' | 'touchMove' | 'touchEnd'): Promise<unknown> {
-    // The protocol wants every finger that is down; it works out which one changed.
-    const touchPoints = [...this.active].map(([id, p]) => ({ id, x: p.x, y: p.y }));
+  private send(
+    type: 'touchStart' | 'touchMove' | 'touchEnd',
+    ids: number[] = [...this.active.keys()],
+  ): Promise<unknown> {
+    // start/move list the fingers that are down; touchEnd lists the ones being lifted.
+    const touchPoints = ids.map((id) => ({ id, ...this.active.get(id)! }));
     return this.cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
   }
 
@@ -41,7 +44,7 @@ export class Fingers {
   }
 
   async up(id: number): Promise<void> {
+    await this.send('touchEnd', [id]);
     this.active.delete(id);
-    await this.send('touchEnd');
   }
 }

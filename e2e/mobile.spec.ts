@@ -33,7 +33,7 @@ test.describe('detection and the title switch', () => {
     await expect(sw).not.toBeChecked();
     await expect(app.getByTestId('touch-switch-note')).toContainText('set by you');
     expect(await app.evaluate(() => window.__fpv!.config().input.touch.mode)).toBe('off');
-    await app.getByRole('button', { name: 'Fly', exact: true }).tap();
+    await app.getByRole('button', { name: /^Fly/ }).tap(); // (with touch off the button shows the ↵ hint again)
     await expect(app.getByTestId('title')).toBeHidden();
     await expect(app.getByTestId('touch-controls')).toBeHidden(); // off means off, even on a phone
 
