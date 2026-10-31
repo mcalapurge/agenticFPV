@@ -31,6 +31,8 @@ test.describe('title menu', () => {
 
   test('Enter starts flying; the keyboard then belongs to the player', async ({ titleApp: app }) => {
     await app.keyboard.press('Enter');
+    // The hint toast appears once, when flying starts (it only lasts a few seconds).
+    await expect(app.getByRole('status')).toContainText('Esc = settings');
     await expect(app.getByTestId('title')).toBeHidden();
     await expect(app.getByTestId('osd')).toBeVisible();
     const s = await app.evaluate(() => {
@@ -43,8 +45,6 @@ test.describe('title menu', () => {
     await expect(app.getByTestId('osd-tc')).toHaveText('DISARMED');
     await app.keyboard.press('Space');
     await app.waitForFunction(() => window.__fpv!.sim.state.armed);
-    // The hint toast appears once, when flying starts.
-    await expect(app.getByRole('status')).toContainText('Esc = settings');
   });
 
   test('starting to fly leaves no trace of the demo (replay, record, settings)', async ({ titleApp: app }) => {
