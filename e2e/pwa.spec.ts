@@ -1,6 +1,20 @@
 // Installable web app: manifest + icons, the service worker, and playing with no network.
 
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+
+/** Wait for the service worker to be active, failing fast (and clearly) if it never registers. */
+async function workerReady(page: Page): Promise<void> {
+  const state = await page.evaluate(() =>
+    Promise.race([
+      navigator.serviceWorker.ready.then((r) => (r.active ? 'active' : 'inactive')),
+      new Promise<string>((resolve) =>
+        setTimeout(() => resolve('timeout: the service worker never registered'), 45_000),
+      ),
+    ]),
+  );
+  expect(state).toBe('active');
+}
 
 test.use({ serviceWorkers: 'allow' });
 
@@ -38,7 +52,7 @@ test('the manifest is linked, valid, and every icon loads at its declared size',
 });
 
 test('the service worker installs, takes control, and has cached the whole build', async ({ titleApp: app }) => {
-  await app.evaluate(() => navigator.serviceWorker.ready);
+  await workerReady(app);
   await app.reload();
   await app.waitForFunction(() => !!window.__fpv, null, { timeout: 150_000 });
   expect(await app.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
@@ -60,7 +74,7 @@ test('the service worker installs, takes control, and has cached the whole build
 });
 
 test('Chrome considers it installable', async ({ titleApp: app }) => {
-  await app.evaluate(() => navigator.serviceWorker.ready);
+  await workerReady(app);
   const cdp = await app.context().newCDPSession(app);
   const { installabilityErrors } = await cdp.send('Page.getInstallabilityErrors');
   expect(installabilityErrors).toEqual([]);
@@ -70,7 +84,7 @@ test('offline play: with the network off, reload still opens the game, which fli
   titleApp: app,
   context,
 }) => {
-  await app.evaluate(() => navigator.serviceWorker.ready);
+  await workerReady(app);
   await app.reload(); // now controlled by the worker
   await app.waitForFunction(() => !!window.__fpv, null, { timeout: 150_000 });
 
