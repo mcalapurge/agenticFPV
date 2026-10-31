@@ -69,7 +69,7 @@ test('the service worker installs, takes control, and has cached the whole build
     };
   });
   expect(listed.length).toBeGreaterThan(8);
-  expect(cached.sort()).toEqual(listed.sort()); // every file of the build, nothing missing
+  expect(cached).toEqual(expect.arrayContaining(listed)); // every file of the build is there (more may follow at runtime)
   expect(cacheNames).toHaveLength(1); // and only this build's cache
 });
 

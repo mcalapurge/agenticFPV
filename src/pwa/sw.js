@@ -13,6 +13,9 @@ const FILES = __PRECACHE__;
 const PREFIX = 'agenticfpv-';
 const CACHE = PREFIX + VERSION;
 const SCOPE = new URL('./', self.location).href;
+// Servers often send `Vary: Origin`. Module scripts are requested with an Origin header, so without this a
+// cached script would not match its own file. Everything here is one origin, so ignoring Vary is safe.
+const MATCH = { ignoreVary: true };
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -41,15 +44,17 @@ async function networkFirst(request) {
     return await fetch(request);
   } catch {
     // Offline: any page address (including ?query) is the same single-page app.
-    return (await caches.match(SCOPE)) || (await caches.match(request)) || Response.error();
+    return (await caches.match(SCOPE, MATCH)) || (await caches.match(request, MATCH)) || Response.error();
   }
 }
 
 async function cacheFirst(request) {
-  const hit = await caches.match(request);
+  const hit = await caches.match(request, MATCH);
   if (hit) return hit;
   const response = await fetch(request);
-  if (response.ok) {
+  // Never keep an HTML page served in place of a missing file (single-page-app fallbacks): it would stick.
+  const html = (response.headers.get('content-type') || '').includes('text/html');
+  if (response.ok && !html) {
     const cache = await caches.open(CACHE);
     await cache.put(request, response.clone());
   }

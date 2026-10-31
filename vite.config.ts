@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -14,7 +14,10 @@ function serviceWorker(): Plugin {
     apply: 'build',
     enforce: 'post',
     generateBundle(_options, bundle) {
-      const publicFiles = ['manifest.webmanifest', ...readdirSync('public/icons').map((f) => `icons/${f}`)];
+      // Everything in public/ (manifest, icons, and photo textures if `npm run fetch-assets` was run).
+      const publicFiles = readdirSync('public', { recursive: true, encoding: 'utf8' })
+        .map((f) => f.split('\\').join('/'))
+        .filter((f) => statSync(join('public', f)).isFile());
       const files = ['./', ...Object.keys(bundle), ...publicFiles].map((f) => (f === './' ? f : `./${f}`));
       // Hashed file names change with the code; public files are covered by their content.
       const version = precacheVersion(

@@ -135,10 +135,16 @@ function makeWorker(opts: { version?: string; files?: string[]; origin?: string 
     open: async (name: string) => cacheFor(name),
     keys: async () => [...store.keys()],
     delete: async (name: string) => store.delete(name),
-    match: async (req: Request | string) => {
+    // Like the real Cache API: a response with `Vary: Origin` only matches a request that sends the same Origin
+    // (none was sent when it was cached) unless `ignoreVary` is set.
+    match: async (req: Request | string, opts?: { ignoreVary?: boolean }) => {
       for (const m of store.values()) {
         const hit = m.get(key(req));
-        if (hit) return hit.clone();
+        if (!hit) continue;
+        const varies = (hit.headers.get('vary') ?? '').toLowerCase().includes('origin');
+        const sendsOrigin = typeof req !== 'string' && req.headers.has('origin');
+        if (varies && sendsOrigin && !opts?.ignoreVary) continue;
+        return hit.clone();
       }
       return undefined;
     },
@@ -147,12 +153,14 @@ function makeWorker(opts: { version?: string; files?: string[]; origin?: string 
   const served: string[] = [];
   let online = true;
   let missing = new Set<string>();
+  const htmlFallback = new Set<string>();
   const network = vi.fn(async (req: Request | string) => {
     const url = key(req);
     served.push(url);
     if (!online) throw new TypeError('Failed to fetch');
     if (missing.has(url)) return new Response('nope', { status: 404 });
-    return new Response(`body of ${url}`, { status: 200 });
+    const type = url.endsWith('.json') && htmlFallback.has(url) ? 'text/html' : 'text/javascript';
+    return new Response(`body of ${url}`, { status: 200, headers: { vary: 'Origin', 'content-type': type } });
   });
 
   const handlers: Record<string, Handler> = {};
@@ -171,8 +179,8 @@ function makeWorker(opts: { version?: string; files?: string[]; origin?: string 
     await pending;
   };
   /** Dispatch a fetch event; resolves to the response, or null if the worker left it alone. */
-  const request = async (url: string, init: { method?: string; mode?: string } = {}) => {
-    const req = new Request(url, { method: init.method ?? 'GET' });
+  const request = async (url: string, init: { method?: string; mode?: string; origin?: string } = {}) => {
+    const req = new Request(url, { method: init.method ?? 'GET', headers: init.origin ? { origin: init.origin } : {} });
     Object.defineProperty(req, 'mode', { value: init.mode ?? 'cors' });
     let responded: Promise<Response> | null = null;
     handlers.fetch({ request: req, respondWith: (p: Promise<Response>) => void (responded = p) });
@@ -189,6 +197,7 @@ function makeWorker(opts: { version?: string; files?: string[]; origin?: string 
     request,
     setOnline: (v: boolean) => void (online = v),
     setMissing: (urls: string[]) => void (missing = new Set(urls)),
+    serveHtmlFor: (url: string) => void htmlFallback.add(url),
   };
 }
 const template = () => text('src/pwa/sw.js');
@@ -267,6 +276,27 @@ describe('service worker', () => {
     w.setOnline(false);
     const again = await w.request(url);
     expect(await again!.text()).toBe(`body of ${url}`);
+  });
+
+  it('serves cached scripts to module requests too (they send an Origin header; the server sent Vary: Origin)', async () => {
+    const w = makeWorker();
+    await w.lifecycle('install');
+    w.setOnline(false);
+    const res = await w.request(`${w.scope}assets/app.js`, { origin: 'https://example.test' });
+    expect(res, 'handled by the worker').not.toBeNull();
+    expect(await res!.text()).toBe(`body of ${w.scope}assets/app.js`);
+  });
+
+  it('never caches an HTML page served in place of a missing file', async () => {
+    const w = makeWorker();
+    await w.lifecycle('install');
+    const url = `${w.scope}textures/manifest.json`;
+    w.serveHtmlFor(url);
+    const first = await w.request(url);
+    expect(first!.status).toBe(200);
+    w.network.mockClear();
+    await w.request(url); // not cached, so it asks again
+    expect(w.network).toHaveBeenCalledTimes(1);
   });
 
   it('does not cache failed responses', async () => {
