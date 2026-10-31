@@ -26,9 +26,11 @@ export function GpuWarning() {
   const gpu = useUiStore((s) => s.gpu);
   const dismissed = useUiStore((s) => s.gpuWarningDismissed);
   const dismiss = useUiStore((s) => s.dismissGpuWarning);
-  if (!gpu?.software || dismissed) return null;
+  const screen = useUiStore((s) => s.screen);
+  const onTitle = screen === 'title';
+  if (!gpu?.software || dismissed || screen === 'demo') return null;
   return (
-    <div id="gpuwarn" role="alert">
+    <div id="gpuwarn" role="alert" className={onTitle ? 'at-bottom' : undefined}>
       <b>Hardware acceleration is off.</b> Your browser is rendering with <code>{gpu.name}</code> (software), so the sim
       will be slow. Enable it in Chrome/Edge: <i>Settings → System → Use graphics acceleration when available</i>, then
       restart. Check <code>chrome://gpu</code> shows “WebGL: Hardware accelerated”. On laptops, set the browser to the

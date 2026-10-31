@@ -17,7 +17,7 @@ export function osdText(sim: Simulator): Record<Slot, string> {
       : `RSSI ${(state.signal * 99).toFixed(0)}`;
   return {
     tl: `${b.voltage.toFixed(1)}V  ${(b.voltage / cells).toFixed(2)}v\n${b.current.toFixed(0).padStart(3)}A ${b.usedMah.toFixed(0)}mAh\n${link}`,
-    tr: `${fmtTime(state.flightTime)}\n${cfg.flight.mode === 'angle' ? 'ANGL' : 'ACRO'}`,
+    tr: `${fmtTime(state.flightTime)}\n${fc.mode === 'angle' ? 'ANGL' : 'ACRO'}`,
     bl: `${quad.speedKmh.toFixed(0).padStart(3)} KM/H\n${quad.pos.y.toFixed(1).padStart(5)} M`,
     br: `THR ${(fc.throttle * 100).toFixed(0).padStart(3)}%`,
     tc: state.armed ? '' : 'DISARMED',

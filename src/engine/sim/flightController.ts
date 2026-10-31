@@ -55,11 +55,15 @@ export interface PidTerms {
   f: number;
 }
 
+export type FlightMode = Config['flight']['mode'];
+
 export class FlightController {
   readonly dt: number;
   config: Config;
   armed = false;
   turtle = false;
+  /** Temporary flight mode that wins over the config (the demo autopilot switches mode mid-flight). */
+  modeOverride: FlightMode | null = null;
   airmodeActive = false;
   throttle = 0;
   readonly setpoint = [0, 0, 0];
@@ -82,6 +86,11 @@ export class FlightController {
     this.dt = dt;
     this.config = config;
     this.applyConfig(config);
+  }
+
+  /** The flight mode in effect right now. */
+  get mode(): FlightMode {
+    return this.modeOverride ?? this.config.flight.mode;
   }
 
   applyConfig(config: Config): void {
@@ -146,7 +155,7 @@ export class FlightController {
     // Setpoints.
     AXES.forEach((axis, a) => {
       let sp = applyRate(rates.type, sticks[axis], rates[axis]);
-      if (cfg.flight.mode === 'angle' && a < 2) {
+      if (this.mode === 'angle' && a < 2) {
         const target = sticks[axis] * pid.angleLimit;
         const current = a === 0 ? attitude.roll : attitude.pitch;
         sp = Math.max(-800, Math.min(800, (target - current) * (pid.angleStrength / 10)));

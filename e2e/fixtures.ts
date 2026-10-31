@@ -7,11 +7,12 @@ type Vec3 = [number, number, number];
 /** Messages that are expected in headless software-GL runs. */
 const IGNORED = [/GPU stall due to ReadPixels/, /AudioContext was not allowed to start/, /WebGL: INVALID_OPERATION/];
 
-export const test = base.extend<{ app: Page; errors: string[] }>({
+export const test = base.extend<{ boot: Page; titleApp: Page; app: Page; errors: string[] }>({
   errors: async ({}, use) => {
     await use([]);
   },
-  app: async ({ page, errors }, use) => {
+  // Load the app and wait for the title menu; fail the test on any console error.
+  boot: async ({ page, errors }, use) => {
     page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
     page.on('console', (m) => {
       if (m.type() === 'error' && !IGNORED.some((r) => r.test(m.text()))) errors.push(`console: ${m.text()}`);
@@ -21,6 +22,17 @@ export const test = base.extend<{ app: Page; errors: string[] }>({
     await expect(page.getByTestId('loading')).toBeHidden();
     await use(page);
     expect(errors, 'no console errors').toEqual([]);
+  },
+  /** The app sitting on the title menu (the autopilot flying behind it). */
+  titleApp: async ({ boot }, use) => {
+    await expect(boot.getByTestId('title')).toBeVisible();
+    await use(boot);
+  },
+  /** The app after pressing "Fly": the player is in control. */
+  app: async ({ boot }, use) => {
+    await boot.getByRole('button', { name: /^Fly/ }).click();
+    await expect(boot.getByTestId('title')).toBeHidden();
+    await use(boot);
   },
 });
 

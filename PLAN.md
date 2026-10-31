@@ -19,6 +19,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 | World / render       | `src/engine/world/*.ts`, `render/*.ts`        | Map, procedural PBR, quad models, environment, post-FX, prop-wash dust, grass wind         |
 | Input                | `src/engine/input/input.ts`                   | Gamepad API, axis mapping, pure calibration wizard, arm switch, keyboard fallback          |
 | UI                   | `src/ui/**/*.tsx`                             | React 19: settings menu (tabs), rate curve preview, OSD, stick overlay, overlays           |
+| Demo                 | `src/engine/demo/*.ts`                        | Stick-input autopilot (angle-mode route + acro tricks), camera director, demo route        |
 | Tests                | `test/unit`, `test/component`, `e2e`          | Vitest (node + jsdom), Testing Library, Playwright                                         |
 
 ## Milestones

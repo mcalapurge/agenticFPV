@@ -2,10 +2,12 @@
 // UI lives in React; it talks to the engine through the stores and `onFrame` subscriptions.
 
 import * as THREE from 'three';
-import { CAMERA_MODES, type Config, type GameMode } from '../state/configSchema';
+import { CAMERA_MODES, DEFAULT_CONFIG, type CameraMode, type Config, type GameMode } from '../state/configSchema';
 import { getConfig, useConfigStore } from '../state/configStore';
-import { useUiStore, type GpuInfo } from '../state/uiStore';
+import { useUiStore, type GpuInfo, type Screen } from '../state/uiStore';
 import { MotorAudio } from './audio/motorAudio';
+import { DemoPilot } from './demo/demoPilot';
+import { DEMO_ROUTE } from './demo/demoRoute';
 import { Game } from './game/game';
 import { Replay } from './game/replay';
 import { InputManager, type InputState } from './input/input';
@@ -22,6 +24,23 @@ import { buildQuadModel, type QuadModel } from './world/quadModel';
 
 export const DT = 1 / 1000; // physics + PID loop: 1 kHz
 const MAX_STEPS_PER_FRAME = 120;
+
+/** Demo flights always use the stock quad and tune, whatever the player has configured. */
+const demoSimConfig = (cfg: Config): Config => ({
+  ...cfg,
+  quad: DEFAULT_CONFIG.quad,
+  pid: DEFAULT_CONFIG.pid,
+  rates: DEFAULT_CONFIG.rates,
+  filters: DEFAULT_CONFIG.filters,
+  flight: DEFAULT_CONFIG.flight,
+  physics: { ...DEFAULT_CONFIG.physics, battery: false, crashEnabled: false, windSpeed: 2, windGust: 0.3 },
+});
+
+/** Impact counters (for the demo soak test and tooling). */
+export interface ImpactStats {
+  count: number;
+  max: number;
+}
 
 export interface SimState {
   armed: boolean;
@@ -82,6 +101,22 @@ export class Simulator {
   readonly hud: Hud = { lap: '', bigCountdown: false, warning: '' };
   quadModel!: QuadModel;
   rc: InputState;
+  readonly pilot: DemoPilot;
+  readonly stats: ImpactStats = { count: 0, max: 0 };
+  private demoOn = false;
+  private hinted = false;
+  private demoCamera: CameraMode = 'chase';
+  private demoCaption = '';
+  private padBaseline: number[] | null = null;
+  private readonly demoRc: InputState = {
+    throttle: 0,
+    yaw: 0,
+    pitch: 0,
+    roll: 0,
+    armSwitch: false,
+    angleSwitch: null,
+    turtleSwitch: false,
+  };
 
   private readonly pilotPos: THREE.Vector3;
   private readonly prevPos = new THREE.Vector3();
@@ -145,6 +180,10 @@ export class Simulator {
       toast: (msg, ms) => useUiStore.getState().toast(msg, ms),
       onRaceFinished: (r) => useUiStore.getState().setResults(r),
     });
+    this.pilot = new DemoPilot({
+      route: DEMO_ROUTE,
+      probe: (origin, dir, max) => this.collision.raycast(origin, dir, max)?.t ?? null,
+    });
     this.rebuildQuadModel();
     this.bindInput();
     this.resetQuad();
@@ -157,6 +196,13 @@ export class Simulator {
         (cfg, prev) => this.applyConfig(cfg, prev),
       ),
     );
+    // The title and demo screens fly the autopilot; only the play screen hands control to the player.
+    this.cleanups.push(
+      useUiStore.subscribe((s, prev) => {
+        if (s.screen !== prev.screen) this.onScreen(s.screen);
+      }),
+    );
+    this.onScreen(useUiStore.getState().screen);
     const onResize = () => this.resize();
     window.addEventListener('resize', onResize);
     this.cleanups.push(() => window.removeEventListener('resize', onResize));
@@ -174,6 +220,75 @@ export class Simulator {
 
   get paused(): boolean {
     return useUiStore.getState().menuOpen || this.replay.active;
+  }
+
+  /** True while the autopilot is flying (title and demo screens). */
+  get demoActive(): boolean {
+    return this.demoOn;
+  }
+
+  /** The camera in use: the demo director's choice, or the player's setting. */
+  get cameraMode(): CameraMode {
+    return this.demoOn ? this.demoCamera : this.config.camera.mode;
+  }
+
+  /** Config the flight controller and physics run on (the stock tune during demos). */
+  private simConfig(cfg: Config = this.config): Config {
+    return this.demoOn ? demoSimConfig(cfg) : cfg;
+  }
+
+  // ── Screens / demo ──────────────────────────────────────────────────────────
+  private onScreen(screen: Screen): void {
+    this.input.blocked = screen !== 'playing';
+    if (screen === 'playing') {
+      this.stopDemo();
+      if (!this.hinted) {
+        this.hinted = true;
+        useUiStore
+          .getState()
+          .toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · P = replay · H = help', 6000);
+      }
+    } else {
+      if (screen === 'demo') this.padBaseline = this.input.getGamepad()?.axes.slice() ?? null;
+      this.startDemo();
+    }
+  }
+
+  startDemo(): void {
+    if (this.demoOn) return;
+    this.demoOn = true;
+    this.input.releaseAll();
+    this.applySimConfig();
+    this.rebuildQuadModel();
+    this.resetQuad();
+  }
+
+  stopDemo(): void {
+    if (!this.demoOn) return;
+    this.demoOn = false;
+    this.fc.modeOverride = null;
+    this.demoCaption = '';
+    this.input.releaseAll();
+    this.applySimConfig();
+    this.rebuildQuadModel();
+    this.replay.clear();
+    this.resetQuad();
+  }
+
+  private applySimConfig(): void {
+    const cfg = this.simConfig();
+    this.fc.applyConfig(cfg);
+    this.quad.applyConfig(cfg);
+  }
+
+  /** Any pad movement or button press on the demo screen hands control back to the title. */
+  private checkDemoExit(): void {
+    if (useUiStore.getState().screen !== 'demo') return;
+    const pad = this.input.getGamepad();
+    if (!pad) return;
+    const base = this.padBaseline ?? pad.axes.map(() => 0);
+    const moved = pad.axes.some((v, i) => Math.abs(v - (base[i] ?? 0)) > 0.4);
+    if (moved || pad.buttons.some((b) => b.pressed)) useUiStore.getState().setScreen('title');
   }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -206,8 +321,8 @@ export class Simulator {
 
   // ── Config ──────────────────────────────────────────────────────────────────
   private applyConfig(cfg: Config, prev: Config | null): void {
-    this.fc.applyConfig(cfg);
-    this.quad.applyConfig(cfg);
+    this.fc.applyConfig(this.simConfig(cfg));
+    this.quad.applyConfig(this.simConfig(cfg));
     this.input.config = cfg;
     this.audio.config = cfg;
     const changed = <K extends keyof Config>(k: K) => !prev || prev[k] !== cfg[k];
@@ -248,7 +363,7 @@ export class Simulator {
 
   rebuildQuadModel(): void {
     if (this.quadModel) this.scene.remove(this.quadModel);
-    const cfg = this.config;
+    const cfg = this.simConfig();
     this.quadModel = buildQuadModel(getPreset(cfg.quad.preset), cfg.physics, { cameraTilt: cfg.camera.tilt });
     this.scene.add(this.quadModel);
   }
@@ -271,6 +386,9 @@ export class Simulator {
     this.prevPos.copy(this.quad.pos);
     this.chasePos.copy(this.quad.pos).add(new THREE.Vector3(0, 1, 3));
     this.game.reset();
+    this.pilot.reset();
+    this.stats.count = 0;
+    this.stats.max = 0;
     useUiStore.getState().setResults(null);
     if (this.replay.active) this.replay.exit();
   }
@@ -313,7 +431,10 @@ export class Simulator {
     const ui = () => useUiStore.getState();
     const i = this.input;
     this.cleanups.push(
-      i.on('menu', () => ui().toggleMenu()),
+      i.on('menu', () => {
+        // On the title screen Esc only closes the settings; in flight it toggles them.
+        if (ui().screen === 'playing' || ui().menuOpen) ui().toggleMenu();
+      }),
       i.on('reset', () => this.resetQuad()),
       i.on('camera', () => this.cycleCamera()),
       i.on('mode', () => this.toggleFlightMode()),
@@ -372,7 +493,7 @@ export class Simulator {
   private updateArming(rc: InputState): void {
     const s = this.state;
     const cfg = this.config;
-    const wantArm = rc.armSwitch && !s.crashed && this.game.allowArm;
+    const wantArm = rc.armSwitch && !s.crashed && (this.game.allowArm || this.demoOn);
     if (!wantArm) {
       s.armed = false;
     } else if (!s.armed && rc.throttle < 0.05) {
@@ -386,6 +507,7 @@ export class Simulator {
     else if (s.turtle) s.warning = 'TURTLE';
     else if (rc.armSwitch && !s.armed && this.game.allowArm) s.warning = 'THROTTLE HIGH';
     else s.warning = cfg.physics.battery && this.quad.battery.voltage / cfg.physics.cells < 3.4 ? 'LOW BATTERY' : '';
+    if (this.demoOn) s.warning = '';
   }
 
   private updateSignal(dt: number, subject: QuadView): void {
@@ -395,13 +517,13 @@ export class Simulator {
       this.state.occluders = this.collision.countOccluders(this.pilotPos, subject.pos, 6);
     }
     const q = signalQuality(this.pilotPos.distanceTo(subject.pos), this.state.occluders, this.config.video);
-    this.state.signal += (q - this.state.signal) * Math.min(1, dt * 6);
+    this.state.signal += (Math.max(q, this.demoOn ? 0.85 : 0) - this.state.signal) * Math.min(1, dt * 6);
   }
 
   private updateCamera(frameDt: number, subject: QuadView): void {
     const cfg = this.config;
     const cam = this.camera;
-    const mode = cfg.camera.mode;
+    const mode = this.cameraMode;
     const size = Math.max(0.3, cfg.physics.armLengthMm / 112);
     if (mode === 'fpv') {
       const hfov = THREE.MathUtils.degToRad(cfg.camera.fov);
@@ -441,15 +563,86 @@ export class Simulator {
     cam.updateProjectionMatrix();
   }
 
+  // ── Simulation step ─────────────────────────────────────────────────────────
+
+  /** One frame of simulation: demo pilot (if flying), arming, 1 kHz physics, crash/impact handling. */
+  private tick(frameDt: number): void {
+    const s = this.state;
+    if (this.demoOn) this.driveDemo(frameDt);
+    const rc = this.rc;
+    this.updateArming(rc);
+    this.accumulator += frameDt;
+    let steps = 0;
+    while (this.accumulator >= DT && steps < MAX_STEPS_PER_FRAME) {
+      this.quad.step(DT, this.fc.update(rc, this.quad.gyro, this.quad.attitude), this.collide);
+      this.accumulator -= DT;
+      steps++;
+    }
+    if (steps >= MAX_STEPS_PER_FRAME) this.accumulator = 0;
+    this.perf.steps = steps;
+    s.simTime += frameDt;
+    if (s.armed) s.flightTime += frameDt;
+    const impact = this.quad.lastImpact;
+    const physics = this.quad.cfg;
+    if (physics.crashEnabled && impact > physics.crashSpeed) {
+      s.crashed = true;
+      s.armed = false;
+      this.fc.armed = false;
+    }
+    if (impact > 0.8) {
+      this.stats.count++;
+      this.audio.impact(impact);
+    }
+    this.stats.max = Math.max(this.stats.max, impact);
+    if (impact > 2.5) this.effects.impact(this.quad.pos, impact);
+    this.quad.lastImpact = 0;
+    if (!this.demoOn) {
+      this.game.update(frameDt, this.quad, this.prevPos, rc);
+      this.replay.record(s.simTime, this.quad);
+    }
+    this.prevPos.copy(this.quad.pos);
+  }
+
+  /** Let the autopilot "hold the sticks" for this frame. */
+  private driveDemo(frameDt: number): void {
+    const cmd = this.pilot.update(frameDt, {
+      pos: this.quad.pos,
+      vel: this.quad.vel,
+      quat: this.quad.quat,
+      gyro: this.quad.gyro,
+    });
+    const rc = this.demoRc;
+    rc.throttle = cmd.throttle;
+    rc.roll = cmd.roll;
+    rc.pitch = cmd.pitch;
+    rc.yaw = cmd.yaw;
+    rc.armSwitch = cmd.armSwitch;
+    this.rc = rc;
+    this.fc.modeOverride = cmd.mode;
+    this.demoCamera = cmd.camera;
+    this.demoCaption = cmd.caption;
+  }
+
+  /**
+   * Run the simulation forward without rendering (tests and tooling). Flies the demo when it is active;
+   * otherwise holds whatever the sticks last were.
+   */
+  advance(seconds: number, step = 1 / 60): void {
+    for (let t = 0; t < seconds; t += step) this.tick(step);
+  }
+
   private frame(now: number): void {
     const cfg = this.config;
     const frameStart = this.lastTime;
     const frameDt = Math.min(0.1, (now - this.lastTime) / 1000);
     this.lastTime = now;
-    const rc = (this.rc = this.input.poll(frameDt));
-    if (rc.angleSwitch !== null) {
-      const mode = rc.angleSwitch ? 'angle' : 'acro';
-      if (mode !== cfg.flight.mode) useConfigStore.getState().setPath('flight.mode', mode);
+    if (this.demoOn) this.checkDemoExit();
+    else {
+      this.rc = this.input.poll(frameDt);
+      if (this.rc.angleSwitch !== null) {
+        const mode = this.rc.angleSwitch ? 'angle' : 'acro';
+        if (mode !== cfg.flight.mode) useConfigStore.getState().setPath('flight.mode', mode);
+      }
     }
     const menuOpen = useUiStore.getState().menuOpen;
     const replay = this.replay;
@@ -457,32 +650,9 @@ export class Simulator {
     const s = this.state;
 
     if (!paused) {
-      this.updateArming(rc);
-      this.accumulator += frameDt;
-      let steps = 0;
       const physStart = performance.now();
-      while (this.accumulator >= DT && steps < MAX_STEPS_PER_FRAME) {
-        this.quad.step(DT, this.fc.update(rc, this.quad.gyro, this.quad.attitude), this.collide);
-        this.accumulator -= DT;
-        steps++;
-      }
-      if (steps >= MAX_STEPS_PER_FRAME) this.accumulator = 0;
+      this.tick(frameDt);
       this.perf.physMs = ema(this.perf.physMs, performance.now() - physStart);
-      this.perf.steps = steps;
-      s.simTime += frameDt;
-      if (s.armed) s.flightTime += frameDt;
-      const impact = this.quad.lastImpact;
-      if (cfg.physics.crashEnabled && impact > cfg.physics.crashSpeed) {
-        s.crashed = true;
-        s.armed = false;
-        this.fc.armed = false;
-      }
-      if (impact > 0.8) this.audio.impact(impact);
-      if (impact > 2.5) this.effects.impact(this.quad.pos, impact);
-      this.quad.lastImpact = 0;
-      this.game.update(frameDt, this.quad, this.prevPos, rc);
-      this.prevPos.copy(this.quad.pos);
-      replay.record(s.simTime, this.quad);
     }
     replay.update(frameDt);
 
@@ -503,24 +673,30 @@ export class Simulator {
       this.env.fxLight,
       this.quad.wind,
     );
-    const listenerDist = cfg.camera.mode === 'fpv' ? 0 : this.camera.position.distanceTo(subject.pos);
+    const listenerDist = this.cameraMode === 'fpv' ? 0 : this.camera.position.distanceTo(subject.pos);
     this.audio.update(
       subject,
       listenerDist,
-      menuOpen || (replay.active && !replay.playing),
-      getPreset(cfg.quad.preset).model.blades,
+      menuOpen || (replay.active && !replay.playing) || useUiStore.getState().screen === 'title',
+      getPreset(this.simConfig(cfg).quad.preset).model.blades,
     );
 
-    this.hud.lap = replay.active ? replay.label() : this.game.osdText(this.camera);
-    this.hud.bigCountdown = !replay.active && this.game.session.phase === 'countdown';
-    this.hud.warning = replay.active ? '' : s.warning;
+    if (this.demoOn) {
+      this.hud.lap = this.demoCaption;
+      this.hud.bigCountdown = false;
+      this.hud.warning = '';
+    } else {
+      this.hud.lap = replay.active ? replay.label() : this.game.osdText(this.camera);
+      this.hud.bigCountdown = !replay.active && this.game.session.phase === 'countdown';
+      this.hud.warning = replay.active ? '' : s.warning;
+    }
     this.listeners.forEach((fn) => fn(this));
 
     const renderStart = performance.now();
     this.post.render(
       this.scene,
       this.camera,
-      computeVideoFx(cfg.video, cfg.camera.mode, s.signal, now / 1000),
+      computeVideoFx(cfg.video, this.cameraMode, s.signal, now / 1000),
       now / 1000,
     );
     this.perf.renderMs = ema(this.perf.renderMs, performance.now() - renderStart);

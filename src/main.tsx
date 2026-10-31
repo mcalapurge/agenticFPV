@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Simulator } from './engine/Simulator';
 import { useConfigStore } from './state/configStore';
 import { useEngineStore } from './state/engineStore';
-import { toast, useUiStore } from './state/uiStore';
+import { useUiStore } from './state/uiStore';
 import { App } from './ui/App';
 import './ui/styles.css';
 
@@ -18,7 +18,6 @@ const sim = await Simulator.create(canvas);
 useEngineStore.getState().setSim(sim);
 useUiStore.getState().setLoading(null);
 sim.start();
-toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · P = replay · H = help', 6000);
 
 // Debug / automation handle (used by the Playwright suite).
 window.__fpv = {

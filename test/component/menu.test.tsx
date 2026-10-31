@@ -81,6 +81,7 @@ describe('settings menu', () => {
   });
 
   it('"Fly" closes the menu', async () => {
+    useUiStore.getState().setScreen('playing');
     open('pids');
     render(<Menu />);
     await userEvent.click(screen.getByRole('button', { name: /Fly/ }));

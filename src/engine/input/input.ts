@@ -77,6 +77,8 @@ export class InputManager {
   kbArm = false;
   kbTurtle = false;
   keyHook: KeyHook | null = null;
+  /** While true the keyboard belongs to the UI (title screen, demo): only Esc is reported. */
+  blocked = false;
 
   private readonly toggles = new Map<string, boolean>();
   private prevButtons: boolean[] = [];
@@ -111,10 +113,23 @@ export class InputManager {
     this.listeners.get(evt)?.forEach((fn) => fn());
   }
 
+  /** Forget held keys and keyboard-armed state (when control changes hands). */
+  releaseAll(): void {
+    this.keys.clear();
+    this.kb.throttle = this.kb.yaw = this.kb.pitch = this.kb.roll = 0;
+    this.kbArm = false;
+    this.kbTurtle = false;
+  }
+
   private onKey(e: KeyboardEvent, down: boolean): void {
     const tag = (e.target as HTMLElement | null)?.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
     const k = e.key.toLowerCase();
+    if (this.blocked) {
+      // Leave every other key alone so buttons keep working (Enter / Space / Tab).
+      if (down && !e.repeat && k === 'escape') this.emit('menu');
+      return;
+    }
     if (down && this.keyHook?.(k, e)) {
       e.preventDefault();
       return;

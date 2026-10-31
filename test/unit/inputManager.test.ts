@@ -77,6 +77,35 @@ describe('InputManager keyboard fallback', () => {
     expect(resets).toBe(0);
   });
 
+  it('hands the keyboard to the UI while blocked, except Esc', () => {
+    const m = make();
+    m.blocked = true;
+    const seen: string[] = [];
+    m.on('menu', () => seen.push('menu'));
+    m.on('reset', () => seen.push('reset'));
+    const down = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
+    window.dispatchEvent(down);
+    tap('w');
+    tap('r');
+    tap('Escape');
+    expect(down.defaultPrevented).toBe(false); // Space still activates focused buttons
+    expect(m.poll(0.5, null)).toMatchObject({ armSwitch: false, throttle: 0 });
+    expect(seen).toEqual(['menu']);
+    m.blocked = false;
+    tap(' ');
+    expect(m.poll(0.016, null).armSwitch).toBe(true);
+  });
+
+  it('releaseAll forgets held keys and keyboard-armed state', () => {
+    const m = make();
+    tap(' ');
+    tap('t');
+    key('keydown', 'w');
+    m.poll(0.5, null);
+    m.releaseAll();
+    expect(m.poll(0.016, null)).toMatchObject({ armSwitch: false, turtleSwitch: false, throttle: 0 });
+  });
+
   it('reads a gamepad through the channel map and arm switch', () => {
     const m = make();
     const pad = { axes: [0.5, -0.5, 1, 0, 1], buttons: [] };

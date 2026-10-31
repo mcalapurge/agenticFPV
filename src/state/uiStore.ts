@@ -4,6 +4,9 @@ import { create } from 'zustand';
 
 export type MenuTab = 'race' | 'quad' | 'controller' | 'rates' | 'pids' | 'filters' | 'physics' | 'camera' | 'help';
 
+/** Which full-screen state the app is in: title menu, hands-off demo, or the player flying. */
+export type Screen = 'title' | 'demo' | 'playing';
+
 export interface Toast {
   id: number;
   message: string;
@@ -29,6 +32,7 @@ export interface GpuInfo {
 }
 
 interface UiState {
+  screen: Screen;
   menuOpen: boolean;
   tab: MenuTab;
   toasts: Toast[];
@@ -37,6 +41,7 @@ interface UiState {
   gpu: GpuInfo | null;
   gpuWarningDismissed: boolean;
   blackbox: boolean;
+  setScreen: (screen: Screen) => void;
   openMenu: (tab?: MenuTab) => void;
   closeMenu: () => void;
   toggleMenu: () => void;
@@ -53,6 +58,7 @@ interface UiState {
 let nextToast = 1;
 
 export const useUiStore = create<UiState>()((set, get) => ({
+  screen: 'title',
   menuOpen: false,
   tab: 'race',
   toasts: [],
@@ -61,6 +67,7 @@ export const useUiStore = create<UiState>()((set, get) => ({
   gpu: null,
   gpuWarningDismissed: false,
   blackbox: false,
+  setScreen: (screen) => set({ screen, menuOpen: false }),
   openMenu: (tab) => set((s) => ({ menuOpen: true, tab: tab ?? s.tab })),
   closeMenu: () => set({ menuOpen: false }),
   toggleMenu: () => set((s) => ({ menuOpen: !s.menuOpen })),

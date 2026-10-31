@@ -8,6 +8,8 @@ export function Menu() {
   const tab = useUiStore((s) => s.tab);
   const setTab = useUiStore((s) => s.setTab);
   const close = useUiStore((s) => s.closeMenu);
+  const screen = useUiStore((s) => s.screen);
+  const setScreen = useUiStore((s) => s.setScreen);
   if (!open) return null;
   const active = TABS.find((t) => t.id === tab) ?? TABS[0];
   const { Component } = active;
@@ -66,8 +68,13 @@ export function Menu() {
           </button>
           <span className="spacer" />
           <span className="hint">Changes apply live and are saved automatically · </span>
+          {screen === 'playing' && (
+            <button className="btn" onClick={() => setScreen('title')}>
+              Main menu
+            </button>
+          )}
           <button className="btn primary" onClick={close}>
-            Fly ▶
+            {screen === 'playing' ? 'Fly ▶' : 'Back'}
           </button>
         </footer>
       </div>

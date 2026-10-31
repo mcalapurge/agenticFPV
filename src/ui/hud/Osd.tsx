@@ -2,11 +2,14 @@
 
 import { useRef } from 'react';
 import { useConfigStore } from '../../state/configStore';
+import { useUiStore } from '../../state/uiStore';
 import { useSimFrame } from '../hooks';
 import { osdText, SLOTS, type Slot } from './osdText';
 
 export function Osd() {
-  const show = useConfigStore((s) => s.config.camera.showOsd);
+  const configured = useConfigStore((s) => s.config.camera.showOsd);
+  const screen = useUiStore((s) => s.screen);
+  const show = configured && screen !== 'title';
   const refs = useRef<Partial<Record<Slot, HTMLDivElement | null>>>({});
   useSimFrame((sim) => {
     const text = osdText(sim);

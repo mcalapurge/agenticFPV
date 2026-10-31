@@ -79,6 +79,36 @@ describe('flight envelope', () => {
   });
 });
 
+describe('flight mode override', () => {
+  const tilted = (override: 'acro' | 'angle' | null) => {
+    const sim = makeSim((c) => {
+      c.flight.mode = 'acro';
+      c.physics.battery = false;
+    });
+    sim.fc.modeOverride = override;
+    sim.quad.quat.setFromAxisAngle(new Vector3(0, 0, 1), -0.35); // rolled ~20° right
+    run(sim, 1.2, centred(hover));
+    return sim;
+  };
+
+  it('reports the mode in effect', () => {
+    const sim = makeSim((c) => void (c.flight.mode = 'acro'));
+    expect(sim.fc.mode).toBe('acro');
+    sim.fc.modeOverride = 'angle';
+    expect(sim.fc.mode).toBe('angle');
+    sim.fc.modeOverride = null;
+    expect(sim.fc.mode).toBe('acro');
+  });
+
+  it('self-levels in angle even though the config says acro, and leaves the config alone', () => {
+    const levelled = tilted('angle');
+    expect(Math.abs(levelled.quad.attitude.roll)).toBeLessThan(3);
+    expect(levelled.cfg.flight.mode).toBe('acro');
+    // Without the override acro just holds the tilt.
+    expect(Math.abs(tilted(null).quad.attitude.roll)).toBeGreaterThan(10);
+  });
+});
+
 describe('ground contact', () => {
   function groundSim(): Sim {
     const sim = makeSim((c) => void (c.physics.battery = false));
