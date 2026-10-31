@@ -11,6 +11,7 @@ import { DemoPilot } from './demo/demoPilot';
 import { DEMO_ROUTE } from './demo/demoRoute';
 import { Game } from './game/game';
 import { Replay } from './game/replay';
+import { detectTouchDevice, touchEnabled } from './input/device';
 import { InputManager, type InputState } from './input/input';
 import { Environment } from './render/environment';
 import { detectGpu } from './render/gpuInfo';
@@ -236,7 +237,12 @@ export class Simulator {
         this.hinted = true;
         useUiStore
           .getState()
-          .toast('Esc = settings · Space = arm (keyboard) · R = reset · C = camera · P = replay · H = help', 6000);
+          .toast(
+            this.input.touch.enabled
+              ? 'Tap ARM, then drag up on the left stick for throttle · right stick: pitch + roll'
+              : 'Esc = settings · Space = arm (keyboard) · R = reset · C = camera · P = replay · H = help',
+            6000,
+          );
       }
     } else {
       if (screen === 'demo') this.padBaseline = this.input.getGamepad()?.axes.slice() ?? null;
@@ -315,6 +321,7 @@ export class Simulator {
   private applyConfig(cfg: Config, prev: Config | null): void {
     this.applySimConfig();
     this.input.config = cfg;
+    this.input.touch.enabled = touchEnabled(cfg.input.touch.mode, detectTouchDevice());
     this.audio.config = cfg;
     const changed = <K extends keyof Config>(k: K) => !prev || prev[k] !== cfg[k];
     if (changed('graphics')) {

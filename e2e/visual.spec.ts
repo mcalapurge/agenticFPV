@@ -1,6 +1,7 @@
 // Screenshot comparisons of the title menu and every settings tab. Baselines are per platform
 // (fonts differ); create/refresh them with `npm run test:visual:update`.
 
+import { devices } from '@playwright/test';
 import { expect, openMenu, test } from './fixtures';
 
 const TABS = ['Race', 'Quad', 'Controller', 'Rates', 'PIDs', 'Filters', 'Physics', 'Video, Env & Audio', 'Help'];
@@ -31,4 +32,22 @@ test.describe('settings tabs', () => {
       });
     });
   }
+});
+
+// A phone in landscape: the title and the touch HUD (everything except the live 3D view).
+test.describe('phone', () => {
+  const { defaultBrowserType: _browser, ...phone } = devices['Pixel 7 landscape'];
+  test.use({ ...phone, deviceScaleFactor: 1 });
+
+  test('title menu on a phone', async ({ titleApp: app }) => {
+    await app.evaluate(() => window.__fpv!.sim.stop());
+    await app.addStyleTag({ content: HIDE_SCENE });
+    await expect(app.locator('#title')).toHaveScreenshot('title-menu-phone.png', { animations: 'disabled' });
+  });
+
+  test('touch controls HUD', async ({ app }) => {
+    await app.evaluate(() => window.__fpv!.sim.stop());
+    await app.addStyleTag({ content: HIDE_SCENE });
+    await expect(app.locator('#touch')).toHaveScreenshot('touch-controls.png', { animations: 'disabled' });
+  });
 });

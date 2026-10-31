@@ -202,6 +202,24 @@ export function ControllerTab() {
         </button>
         {wizardOpen && <Wizard onClose={() => setWizardOpen(false)} />}
       </Section>
+      <Section title="Touch controls (phones & tablets)">
+        <div className="grid2">
+          <Field
+            kind="select"
+            path="input.touch.mode"
+            label="On-screen sticks"
+            options={{ auto: 'Auto-detect', on: 'Always on', off: 'Off' }}
+          />
+          <Field kind="bool" path="input.touch.throttleHold" label="Throttle holds position" />
+          <Field kind="number" path="input.touch.size" label="Stick size" min={0.6} max={1.6} step={0.05} />
+          <Field kind="number" path="input.touch.expo" label="Stick expo" min={0} max={1} step={0.05} />
+          <Field kind="bool" path="input.touch.haptics" label="Vibrate on button press" />
+        </div>
+        <p className="hint">
+          Left stick: throttle (drag up/down; it stays where you leave it) and yaw. Right stick: pitch and roll. Use
+          ARM, then raise the throttle. A connected gamepad or radio always takes over.
+        </p>
+      </Section>
       <div className="grid2">
         <Section title="Mapped channels">
           <div className="bars">

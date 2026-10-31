@@ -2,6 +2,7 @@
 
 import type { ChannelConfig, ChannelName, Config, SwitchConfig } from '../../state/configSchema';
 import type { Sticks } from '../sim/flightController';
+import { TouchInput } from './touch';
 
 export const CHANNELS: readonly ChannelName[] = ['throttle', 'yaw', 'pitch', 'roll'];
 
@@ -79,6 +80,8 @@ export class InputManager {
   keyHook: KeyHook | null = null;
   /** While true the keyboard belongs to the UI (title screen, demo): only Esc is reported. */
   blocked = false;
+  /** On-screen sticks (phones/tablets); used when no gamepad is connected and `touch.enabled`. */
+  readonly touch = new TouchInput();
 
   private readonly toggles = new Map<string, boolean>();
   private prevButtons: boolean[] = [];
@@ -119,6 +122,7 @@ export class InputManager {
     this.kb.throttle = this.kb.yaw = this.kb.pitch = this.kb.roll = 0;
     this.kbArm = false;
     this.kbTurtle = false;
+    this.touch.reset();
   }
 
   private onKey(e: KeyboardEvent, down: boolean): void {
@@ -143,10 +147,10 @@ export class InputManager {
       }
       if (k === ' ' || k === 'enter') {
         e.preventDefault();
-        this.kbArm = !this.kbArm;
+        this.toggleArm();
       }
       if (k === 'm') this.emit('mode');
-      if (k === 't') this.kbTurtle = !this.kbTurtle;
+      if (k === 't') this.toggleTurtle();
       if (k === 'x') this.kb.throttle = 0; // act on the event: a tap can fall between two polls
       if (k === 'h') this.emit('help');
     }
@@ -198,6 +202,16 @@ export class InputManager {
         this.emit('reset');
       }
       this.prevButtons = pad.buttons.map((b) => b.pressed);
+    } else if (this.touch.enabled) {
+      this.usingKeyboard = false;
+      const t = this.touch;
+      s.throttle = t.throttle;
+      s.yaw = t.yaw;
+      s.pitch = t.pitch;
+      s.roll = t.roll;
+      s.armSwitch = this.kbArm; // the on-screen ARM button toggles this
+      s.angleSwitch = null;
+      s.turtleSwitch = this.kbTurtle;
     } else {
       this.usingKeyboard = true;
       this.keyboard(dt);
@@ -207,6 +221,20 @@ export class InputManager {
       s.turtleSwitch = this.kbTurtle;
     }
     return s;
+  }
+
+  // ── Actions shared by keys and on-screen buttons ───────────────────────────
+  toggleArm(): boolean {
+    return (this.kbArm = !this.kbArm);
+  }
+
+  toggleTurtle(): boolean {
+    return (this.kbTurtle = !this.kbTurtle);
+  }
+
+  /** Fire an input event as if its key had been pressed (on-screen buttons). */
+  trigger(evt: InputEvent): void {
+    this.emit(evt);
   }
 
   private keyboard(dt: number): void {

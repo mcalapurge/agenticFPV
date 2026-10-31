@@ -5,6 +5,7 @@ import { StickOverlay } from './hud/StickOverlay';
 import { Menu } from './menu/Menu';
 import { DemoOverlay } from './title/DemoOverlay';
 import { TitleScreen } from './title/TitleScreen';
+import { TouchControls } from './touch/TouchControls';
 
 export function App() {
   return (
@@ -15,6 +16,7 @@ export function App() {
       <Toasts />
       <GpuWarning />
       <Results />
+      <TouchControls />
       <TitleScreen />
       <DemoOverlay />
       <Menu />

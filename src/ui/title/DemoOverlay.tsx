@@ -2,9 +2,11 @@
 
 import { useEffect } from 'react';
 import { useUiStore } from '../../state/uiStore';
+import { useTouchEnabled } from '../hooks';
 
 export function DemoOverlay() {
   const screen = useUiStore((s) => s.screen);
+  const touch = useTouchEnabled();
   useEffect(() => {
     if (screen !== 'demo') return;
     const exit = () => useUiStore.getState().setScreen('title');
@@ -24,7 +26,7 @@ export function DemoOverlay() {
   if (screen !== 'demo') return null;
   return (
     <div id="demo-hint" data-testid="demo-hint">
-      DEMO · press any key to go back
+      DEMO · {touch ? 'tap anywhere' : 'press any key'} to go back
     </div>
   );
 }

@@ -24,8 +24,14 @@ export default defineConfig({
   projects: [
     {
       name: 'e2e',
-      testIgnore: /visual\.spec\.ts/,
+      testIgnore: /(visual|mobile)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 720 } },
+    },
+    {
+      // A phone in landscape: touch input, mobile user agent and viewport (the app auto-enables touch controls).
+      name: 'mobile',
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices['Pixel 7 landscape'], deviceScaleFactor: 1 },
     },
     {
       name: 'visual',

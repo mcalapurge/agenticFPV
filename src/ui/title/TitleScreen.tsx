@@ -1,9 +1,10 @@
 // Title menu: shown over the live autopilot flight (the sim keeps flying behind it).
 
 import { useEffect, useRef, type KeyboardEvent } from 'react';
+import { useConfigStore } from '../../state/configStore';
 import { useSim } from '../../state/engineStore';
 import { useUiStore } from '../../state/uiStore';
-import { useFrameTick } from '../hooks';
+import { useFrameTick, useTouchDetected, useTouchEnabled } from '../hooks';
 
 export function TitleScreen() {
   const screen = useUiStore((s) => s.screen);
@@ -22,6 +23,7 @@ export function TitleScreen() {
     }
   }, [screen, menuOpen, loading]);
 
+  const touch = useTouchEnabled();
   if (screen !== 'title') return null;
 
   const { setScreen, openMenu } = useUiStore.getState();
@@ -43,7 +45,7 @@ export function TitleScreen() {
         <p className="title-tag">Browser FPV drone simulator</p>
         <nav ref={nav} className="title-nav" onKeyDown={onKeyDown}>
           <button className="primary" onClick={() => setScreen('playing')}>
-            Fly <kbd>↵</kbd>
+            Fly {!touch && <kbd>↵</kbd>}
           </button>
           <button onClick={() => setScreen('demo')}>Watch demo</button>
           <button onClick={() => openMenu('race')}>Race &amp; tracks</button>
@@ -51,6 +53,7 @@ export function TitleScreen() {
           <button onClick={() => openMenu('controller')}>Controller</button>
           <button onClick={() => openMenu('help')}>How to play</button>
         </nav>
+        <TouchSwitch />
         <PadStatus />
       </div>
     </div>
@@ -59,11 +62,72 @@ export function TitleScreen() {
 
 function PadStatus() {
   const sim = useSim();
+  const touch = useTouchEnabled();
   useFrameTick(2);
   const pad = sim?.input.getGamepad();
+  let text = '⌨ Keyboard mode · plug in a radio (USB joystick) or gamepad to fly with it';
+  if (pad) text = `🎮 ${pad.id}`;
+  else if (touch) text = '👆 Touch controls on · or plug in a gamepad';
   return (
     <p className="title-pad" data-testid="title-pad">
-      {pad ? `🎮 ${pad.id}` : '⌨ Keyboard mode · plug in a radio (USB joystick) or gamepad to fly with it'}
+      {text}
     </p>
+  );
+}
+
+/**
+ * Touch controls on/off. Device detection is a best guess, so this is a plain switch that always wins:
+ * flipping it sets the setting explicitly, and "auto" puts detection back in charge.
+ */
+function TouchSwitch() {
+  const enabled = useTouchEnabled();
+  const detected = useTouchDetected();
+  const mode = useConfigStore((s) => s.config.input.touch.mode);
+  const setMode = (m: 'auto' | 'on' | 'off') => useConfigStore.getState().setPath('input.touch.mode', m);
+  const canFullscreen = typeof document !== 'undefined' && document.fullscreenEnabled;
+  const fullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else
+      void document.documentElement
+        .requestFullscreen()
+        .then(() =>
+          (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape'),
+        )
+        .catch(() => undefined);
+  };
+  return (
+    <div className="title-switch">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label="Touch controls"
+        className={`switch${enabled ? ' on' : ''}`}
+        data-testid="touch-switch"
+        onClick={() => setMode(enabled ? 'off' : 'on')}
+      >
+        <span className="knob" />
+      </button>
+      <span className="title-switch-label">
+        Touch controls
+        <small data-testid="touch-switch-note">
+          {mode === 'auto' ? (
+            `auto: ${detected ? 'phone or tablet detected' : 'desktop detected'}`
+          ) : (
+            <>
+              set by you ·{' '}
+              <button type="button" className="link" onClick={() => setMode('auto')}>
+                use auto-detect
+              </button>
+            </>
+          )}
+        </small>
+      </span>
+      {canFullscreen && enabled && (
+        <button type="button" className="title-fs" onClick={fullscreen}>
+          Fullscreen
+        </button>
+      )}
+    </div>
   );
 }

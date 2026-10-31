@@ -46,6 +46,7 @@ export const TIMES_OF_DAY = ['day', 'golden', 'overcast', 'dusk', 'night'] as co
 export const RATE_TYPES = ['actual', 'betaflight'] as const;
 export const FLIGHT_MODES = ['acro', 'angle'] as const;
 export const VTX_POWERS = [25, 200, 600, 1000] as const;
+export const TOUCH_MODES = ['auto', 'on', 'off'] as const;
 
 export const ConfigSchema = section({
   quad: section({ preset: str('freestyle5') }),
@@ -171,6 +172,14 @@ export const ConfigSchema = section({
     reset: switchCfg('button', -1, 0.5),
     turtle: switchCfg('none', 6),
     mode: switchCfg('none', 5),
+    // On-screen sticks for phones and tablets. 'auto' follows device detection; on/off override it.
+    touch: section({
+      mode: choice(TOUCH_MODES, 'auto'),
+      throttleHold: bool(true), // throttle stays where you leave it (like a real radio) instead of springing to zero
+      size: num(1, 0.6, 1.6), // stick size multiplier
+      expo: num(0.35, 0, 1), // softens the centre of the roll/pitch/yaw sticks
+      haptics: bool(true),
+    }),
   }),
 });
 
@@ -185,6 +194,7 @@ export type Axis = 'roll' | 'pitch' | 'yaw';
 export type GameMode = (typeof GAME_MODES)[number];
 export type CameraMode = (typeof CAMERA_MODES)[number];
 export type TimeOfDay = (typeof TIMES_OF_DAY)[number];
+export type TouchMode = (typeof TOUCH_MODES)[number];
 
 /** Validate anything (stored JSON, imported file, partial object) into a complete Config. */
 export function parseConfig(input: unknown): Config {

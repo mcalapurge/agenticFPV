@@ -3,12 +3,13 @@
 import { useRef } from 'react';
 import { useConfigStore } from '../../state/configStore';
 import { useUiStore } from '../../state/uiStore';
-import { useSimFrame } from '../hooks';
+import { useSimFrame, useTouchEnabled } from '../hooks';
 
 export function StickOverlay() {
   const configured = useConfigStore((s) => s.config.camera.showSticks);
   const screen = useUiStore((s) => s.screen);
-  const show = configured && screen !== 'title';
+  const touch = useTouchEnabled();
+  const show = configured && screen !== 'title' && !touch; // the touch sticks show themselves
   const ref = useRef<HTMLCanvasElement>(null);
   useSimFrame((sim) => {
     const cs = ref.current;

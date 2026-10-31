@@ -3,13 +3,14 @@
 import { useRef } from 'react';
 import { useConfigStore } from '../../state/configStore';
 import { useUiStore } from '../../state/uiStore';
-import { useSimFrame } from '../hooks';
+import { useSimFrame, useTouchEnabled } from '../hooks';
 import { osdText, SLOTS, type Slot } from './osdText';
 
 export function Osd() {
   const configured = useConfigStore((s) => s.config.camera.showOsd);
   const screen = useUiStore((s) => s.screen);
   const show = configured && screen !== 'title';
+  const touch = useTouchEnabled() && screen === 'playing';
   const refs = useRef<Partial<Record<Slot, HTMLDivElement | null>>>({});
   useSimFrame((sim) => {
     const text = osdText(sim);
@@ -22,7 +23,12 @@ export function Osd() {
     refs.current.perf?.classList.toggle('hidden', !text.perf);
   });
   return (
-    <div id="osd" data-testid="osd" style={{ display: show ? undefined : 'none' }}>
+    <div
+      id="osd"
+      data-testid="osd"
+      className={touch ? 'touch' : undefined}
+      style={{ display: show ? undefined : 'none' }}
+    >
       {SLOTS.map((k) => (
         <div key={k} className={`el ${k}`} data-testid={`osd-${k}`} ref={(el) => void (refs.current[k] = el)} />
       ))}
