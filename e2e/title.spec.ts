@@ -61,6 +61,19 @@ test.describe('title menu', () => {
     expect(after.records).toBeNull();
   });
 
+  test('handing over drops the pilot’s stick positions at once', async ({ titleApp: app }) => {
+    const rc = await app.evaluate(() => {
+      const { sim, ui } = window.__fpv!;
+      sim.advance(10); // the pilot is flying, switch armed, throttle up
+      const during = { arm: sim.rc.armSwitch, throttle: sim.rc.throttle };
+      ui.getState().setScreen('playing'); // synchronous: no frame runs in between
+      return { during, after: { arm: sim.rc.armSwitch, throttle: sim.rc.throttle } };
+    });
+    expect(rc.during.arm).toBe(true);
+    expect(rc.during.throttle).toBeGreaterThan(0.1);
+    expect(rc.after).toEqual({ arm: false, throttle: 0 });
+  });
+
   test('the demo always flies the stock tune, whatever the player has configured', async ({ titleApp: app }) => {
     await app.evaluate(() =>
       window.__fpv!.update((c) => {

@@ -16,6 +16,11 @@ It's built on Three.js, and everything works with no downloaded assets.
 
 ## Screenshots
 
+|                                                                             |                                                                                                         |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| ![Title menu over a live autopilot flight](docs/screenshots/title-menu.jpg) | ![Demo mode: the autopilot mid power loop, with OSD and call-out](docs/screenshots/demo-power-loop.jpg) |
+| **Title menu**: the autopilot keeps flying behind it                        | **Watch demo**: power loops, flips and rolls, flown with real stick inputs                              |
+
 |                                                                                                                         |                                                                                                            |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | ![Inside the roofless warehouse on the Warehouse Sprint track, analog video](docs/screenshots/warehouse-run-analog.jpg) | ![Threading the floor-2 gate of the concrete skeleton, overcast](docs/screenshots/skeleton-floor-gate.jpg) |

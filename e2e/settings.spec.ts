@@ -10,6 +10,9 @@ test('PID edits reach the flight controller and persist across reloads', async (
   expect(await app.evaluate(() => window.__fpv!.sim.fc.config.pid.roll.p)).toBe(58);
   await app.reload();
   await app.waitForFunction(() => !!window.__fpv, null, { timeout: 150_000 });
+  // Saved with the settings; the title-screen demo flies the stock tune, yours applies once you fly.
+  expect(await app.evaluate(() => window.__fpv!.config().pid.roll.p)).toBe(58);
+  await app.getByRole('button', { name: /^Fly/ }).click();
   expect(await app.evaluate(() => window.__fpv!.sim.fc.config.pid.roll.p)).toBe(58);
 });
 

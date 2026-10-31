@@ -266,6 +266,7 @@ export class Simulator {
   stopDemo(): void {
     if (!this.demoOn) return;
     this.demoOn = false;
+    this.rc = this.input.state; // the player's sticks again, not the pilot's last ones
     this.fc.modeOverride = null;
     this.demoCaption = '';
     this.input.releaseAll();

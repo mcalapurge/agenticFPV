@@ -148,3 +148,11 @@ environment's network policy, so real photo textures are fetched by a script the
   loop, practice PB/ghost, track editor, replay) on SwiftShader in ~11 min; 9 visual baselines (settings
   tabs, ≤20 px tolerance, mutation-checked). Found and fixed: throttle-cut tap lost between polls at low
   frame rates. CI workflow runs typecheck, lint, format, Vitest + coverage, build and the e2e suite.
+- **M20 Title menu + demo.** Title menu (Fly, Watch demo, settings shortcuts) opens over a live autopilot flight;
+  `Screen` state (title / demo / playing) in the UI store drives the simulator. `DemoPilot` is a pure
+  stick-input autopilot: angle-mode route following with a velocity→tilt controller, acro flips / rolls /
+  power loops / yaw spin closed on integrated gyro angle, ray-probe obstacle avoidance (climbs over things),
+  tricks skipped without room, camera director. The demo always flies the stock quad and tune and never
+  touches the player's settings. `Simulator.advance()` fast-forwards without rendering: a 30-minute soak on
+  the real map gave 26 laps, ~250 tricks, zero impacts after launch (route tuned until the obstacle probe
+  never fired). Tests: Vitest 214 total; Playwright 31 e2e (incl. a 10-minute soak) + 10 visual baselines.
