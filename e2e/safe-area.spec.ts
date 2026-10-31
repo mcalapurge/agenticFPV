@@ -159,7 +159,9 @@ for (const phone of PHONES) {
 
       // In flight: touch controls, OSD readouts and the rotate prompt.
       await app.getByRole('button', { name: /^Fly/ }).click();
-      await frames(app, 1); // fills the OSD text
+      // Let a couple of frames run so the OSD fills in, then freeze the scene again.
+      await app.evaluate(() => window.__fpv!.sim.start());
+      await frames(app, 2);
       await app.evaluate(() => window.__fpv!.sim.stop());
       const controls = await boxes(app, ['.tc-btn', '.tc-ring', '.tc-thr', '.tc-rotate']);
       expect(controls.length, `${where}: touch controls present`).toBeGreaterThanOrEqual(8);
@@ -192,6 +194,7 @@ for (const phone of PHONES) {
       const flightMenu = await boxes(app, ['#menu .panel', '#menu footer button']);
       expect(outside(flightMenu, safe), `${where}: in-flight settings inside the safe area`).toEqual([]);
       await app.getByRole('button', { name: 'Main menu' }).click();
+      await app.evaluate(() => window.__fpv!.sim.stop());
     }
   });
 }
