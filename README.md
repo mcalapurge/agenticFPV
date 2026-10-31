@@ -233,8 +233,9 @@ Everything ships procedurally, so the repo contains no binary art:
   [`@pmndrs/assets`](https://github.com/pmndrs/assets) (CC0).
 
 **Photo textures (optional).** `npm run fetch-assets` downloads CC0 PBR texture sets from Poly Haven
-into `public/textures/`. It also writes `manifest.json` and `CREDITS.md` there. On the next load the game
-uses them automatically; without them it falls back to the procedural textures.
+into `public/textures/`. It also writes `manifest.json` and `CREDITS.md` there. Restart `npm run dev` (or
+rebuild) and the game uses them automatically; without them it falls back to the procedural textures and
+never asks for the files.
 
 ## Layout
 

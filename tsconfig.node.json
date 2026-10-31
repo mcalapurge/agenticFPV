@@ -22,6 +22,7 @@
     "playwright.config.ts",
     "scripts/**/*.ts",
     "e2e/**/*.ts",
-    "src/debug.d.ts"
+    "src/debug.d.ts",
+    "src/globals.d.ts"
   ]
 }

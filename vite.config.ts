@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -34,5 +34,7 @@ function serviceWorker(): Plugin {
 export default defineConfig({
   base: './',
   plugins: [react(), serviceWorker()],
+  // Only look for photo textures if they were installed (avoids a 404 / offline error on every load).
+  define: { __PHOTO_TEXTURES__: JSON.stringify(existsSync('public/textures/manifest.json')) },
   build: { target: 'es2022', chunkSizeWarningLimit: 1500 },
 });

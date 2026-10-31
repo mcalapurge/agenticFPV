@@ -31,6 +31,7 @@ function canvasTexture(N: number, pixels: Uint8ClampedArray, srgb: boolean): THR
 }
 
 async function loadManifest(): Promise<z.infer<typeof Manifest> | null> {
+  if (!__PHOTO_TEXTURES__) return null; // nothing installed: no request (and no 404 in the console)
   try {
     const res = await fetch('textures/manifest.json', { cache: 'no-cache' });
     if (!res.ok) return null;

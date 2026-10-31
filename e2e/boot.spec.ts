@@ -43,3 +43,18 @@ test('canvas fills the viewport and follows resizes', async ({ app }) => {
   const aspect = await app.evaluate(() => window.__fpv!.sim.camera.aspect);
   expect(aspect).toBeCloseTo(800 / 600, 2);
 });
+
+test('does not probe for photo textures that are not installed', async ({ page }) => {
+  const asked: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/textures/')) asked.push(r.url());
+  });
+  const failed: string[] = [];
+  page.on('response', (r) => {
+    if (r.status() >= 400) failed.push(`${r.status()} ${r.url()}`);
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => !!window.__fpv, null, { timeout: 150_000 });
+  expect(asked).toEqual([]);
+  expect(failed).toEqual([]);
+});
