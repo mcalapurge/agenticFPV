@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="36%" r="78%">
+      <stop offset="0" stop-color="#2b303b" />
+      <stop offset="1" stop-color="#0b0c0f" />
+    </radialGradient>
+  </defs>
+  <!-- Full-bleed background; the artwork stays inside the central 80% "safe zone" so any mask shape works. -->
+  <rect width="512" height="512" fill="url(#bg)" />
+  <g transform="translate(256 262) scale(0.78)">
+    <path d="M-118 -118 L118 118 M118 -118 L-118 118" stroke="#e6e8eb" stroke-width="26" stroke-linecap="round" />
+    <g fill="rgba(255,122,26,0.26)" stroke="#ff7a1a" stroke-width="9">
+      <circle cx="-118" cy="-118" r="64" />
+      <circle cx="118" cy="-118" r="64" />
+      <circle cx="-118" cy="118" r="64" />
+      <circle cx="118" cy="118" r="64" />
+    </g>
+    <g fill="#14161b" stroke="#e6e8eb" stroke-width="7">
+      <circle cx="-118" cy="-118" r="19" />
+      <circle cx="118" cy="-118" r="19" />
+      <circle cx="-118" cy="118" r="19" />
+      <circle cx="118" cy="118" r="19" />
+    </g>
+    <rect x="-44" y="-58" width="88" height="120" rx="22" fill="#1b1c1f" stroke="#e6e8eb" stroke-width="8" />
+    <rect x="-26" y="-14" width="52" height="58" rx="10" fill="#ff7a1a" />
+    <circle cx="0" cy="-34" r="11" fill="#22c8ff" />
+    <path d="M0 -100 L22 -70 L-22 -70 Z" fill="#ff7a1a" />
+  </g>
+</svg>

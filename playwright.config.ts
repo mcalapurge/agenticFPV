@@ -20,17 +20,19 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: { args: softwareGL },
+    // The app's service worker is off for ordinary tests (no cache surprises); e2e/pwa.spec.ts turns it on.
+    serviceWorkers: 'block',
   },
   projects: [
     {
       name: 'e2e',
-      testIgnore: /(visual|mobile)\.spec\.ts/,
+      testIgnore: /(visual|mobile|safe-area)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 720 } },
     },
     {
       // A phone in landscape: touch input, mobile user agent and viewport (the app auto-enables touch controls).
       name: 'mobile',
-      testMatch: /mobile\.spec\.ts/,
+      testMatch: /(mobile|safe-area)\.spec\.ts/,
       use: { ...devices['Pixel 7 landscape'], deviceScaleFactor: 1 },
     },
     {

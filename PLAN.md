@@ -156,3 +156,12 @@ environment's network policy, so real photo textures are fetched by a script the
   touches the player's settings. `Simulator.advance()` fast-forwards without rendering: a 30-minute soak on
   the real map gave 26 laps, ~250 tricks, zero impacts after launch (route tuned until the obstacle probe
   never fired). Tests: Vitest 214 total; Playwright 31 e2e (incl. a 10-minute soak) + 10 visual baselines.
+- **M22 PWA + safe areas.** Manifest (fullscreen, landscape), generated icons (any / maskable / Apple touch),
+  iOS meta tags, and a service worker stamped at build time with a version and the exact file list (new release →
+  new worker → old cache dropped; build fails if a placeholder is left). Offline play verified end to end
+  (reload with the network off, then fly and load a lazy sky chunk). Title-screen install hint (iOS steps,
+  Android menu path, real Install button on `beforeinstallprompt`, hidden when installed). All UI routed through
+  `--safe-*` / `--inset-*` CSS variables; tested with emulated insets on 7 phone profiles. Found and fixed: a
+  stale `vite.config.js` from before the TypeScript migration was shadowing `vite.config.ts` (the React plugin
+  and the new service-worker plugin were not running); the software-rendering banner swallowing taps on small
+  screens.

@@ -198,3 +198,40 @@ test.describe('demo on a phone', () => {
     await expect(app.getByTestId('title')).toBeVisible();
   });
 });
+
+const IPHONE_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+
+test.describe('install hints on the title (Android)', () => {
+  test('manual steps, then a real Install button when the browser offers one', async ({ titleApp: app }) => {
+    const hint = app.getByTestId('install-hint');
+    await expect(hint).toContainText('Install as an app');
+    await app.getByText(/Install as an app/).tap();
+    await expect(hint).toContainText(/Install app|Add to Home screen/);
+
+    await app.evaluate(() => {
+      const w = window as unknown as { __prompted?: number };
+      w.__prompted = 0;
+      const event = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
+        prompt: async () => void (w.__prompted = (w.__prompted ?? 0) + 1),
+        userChoice: Promise.resolve({ outcome: 'accepted' }),
+      });
+      window.dispatchEvent(event);
+    });
+    await app.getByRole('button', { name: 'Install app' }).tap();
+    await expect.poll(() => app.evaluate(() => (window as unknown as { __prompted?: number }).__prompted)).toBe(1);
+    await expect(app.getByRole('button', { name: 'Install app' })).toBeHidden();
+  });
+});
+
+test.describe('install hints on the title (iPhone)', () => {
+  test.use({ userAgent: IPHONE_UA });
+
+  test('iPhone has no install prompt, so it shows Share → Add to Home Screen', async ({ titleApp: app }) => {
+    const hint = app.getByTestId('install-hint');
+    await app.getByText(/Install as an app/).tap();
+    await expect(hint).toContainText('Share');
+    await expect(hint).toContainText('Add to Home Screen');
+    await expect(hint).not.toContainText('Install app');
+  });
+});

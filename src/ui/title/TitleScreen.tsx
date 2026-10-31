@@ -5,6 +5,7 @@ import { useConfigStore } from '../../state/configStore';
 import { useSim } from '../../state/engineStore';
 import { useUiStore } from '../../state/uiStore';
 import { useFrameTick, useTouchDetected, useTouchEnabled } from '../hooks';
+import { useInstall } from '../pwa';
 
 export function TitleScreen() {
   const screen = useUiStore((s) => s.screen);
@@ -54,6 +55,7 @@ export function TitleScreen() {
           <button onClick={() => openMenu('help')}>How to play</button>
         </nav>
         <TouchSwitch />
+        <InstallHint />
         <PadStatus />
       </div>
     </div>
@@ -84,7 +86,9 @@ function TouchSwitch() {
   const detected = useTouchDetected();
   const mode = useConfigStore((s) => s.config.input.touch.mode);
   const setMode = (m: 'auto' | 'on' | 'off') => useConfigStore.getState().setPath('input.touch.mode', m);
-  const canFullscreen = typeof document !== 'undefined' && document.fullscreenEnabled;
+  const { standalone } = useInstall();
+  // An installed app is already fullscreen.
+  const canFullscreen = typeof document !== 'undefined' && document.fullscreenEnabled && !standalone;
   const fullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
     else
@@ -129,5 +133,51 @@ function TouchSwitch() {
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * Home-screen install, for the full-screen, bars-free experience. iPhone has no install prompt, so it gets
+ * the steps; Chrome/Android get a button where the browser offers one, else the menu path. Hidden once installed.
+ */
+function InstallHint() {
+  const { standalone, platform, canPrompt, prompt } = useInstall();
+  const touch = useTouchEnabled();
+  if (standalone) return null;
+  if (canPrompt) {
+    return (
+      <div className="title-install" data-testid="install-hint">
+        <button type="button" className="title-fs" onClick={() => void prompt()}>
+          Install app
+        </button>
+        <small>Fullscreen, no browser bars, works offline</small>
+      </div>
+    );
+  }
+  if (!touch || platform === 'other') return null;
+  return (
+    <details className="title-install" data-testid="install-hint">
+      <summary>Install as an app (no browser bars)</summary>
+      {platform === 'ios' ? (
+        <ol>
+          <li>
+            Tap <b>Share</b> <span aria-hidden>⎋</span> in Safari
+          </li>
+          <li>
+            Choose <b>Add to Home Screen</b>
+          </li>
+          <li>Open agenticFPV from your home screen</li>
+        </ol>
+      ) : (
+        <ol>
+          <li>
+            Open the browser menu <span aria-hidden>⋮</span>
+          </li>
+          <li>
+            Choose <b>Install app</b> or <b>Add to Home screen</b>
+          </li>
+        </ol>
+      )}
+    </details>
   );
 }

@@ -25,7 +25,8 @@
     "test:visual": "playwright test --project=visual",
     "test:visual:update": "playwright test --project=visual --update-snapshots",
     "test:all": "npm run typecheck && npm run lint && npm run test:coverage && npm run test:e2e",
-    "fetch-assets": "node scripts/fetch-assets.ts"
+    "fetch-assets": "node scripts/fetch-assets.ts",
+    "make-icons": "node scripts/make-icons.ts"
   },
   "dependencies": {
     "@pmndrs/assets": "1.7.0",

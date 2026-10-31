@@ -19,6 +19,13 @@ useEngineStore.getState().setSim(sim);
 useUiStore.getState().setLoading(null);
 sim.start();
 
+// Offline play + home-screen install (production builds only; dev uses Vite's own server).
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(new URL('sw.js', document.baseURI)).catch(() => undefined);
+  });
+}
+
 // Debug / automation handle (used by the Playwright suite).
 window.__fpv = {
   sim,

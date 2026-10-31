@@ -1,9 +1,35 @@
-import { defineConfig } from 'vite';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { precacheVersion, stampServiceWorker } from './src/pwa/stamp.ts';
+
+/**
+ * PWA service worker: stamps src/pwa/sw.js with a build version and the list of files to cache for offline
+ * play (every emitted file plus the manifest and icons from public/), and emits it as dist/sw.js.
+ */
+function serviceWorker(): Plugin {
+  return {
+    name: 'agenticfpv-service-worker',
+    apply: 'build',
+    enforce: 'post',
+    generateBundle(_options, bundle) {
+      const publicFiles = ['manifest.webmanifest', ...readdirSync('public/icons').map((f) => `icons/${f}`)];
+      const files = ['./', ...Object.keys(bundle), ...publicFiles].map((f) => (f === './' ? f : `./${f}`));
+      // Hashed file names change with the code; public files are covered by their content.
+      const version = precacheVersion(
+        files,
+        publicFiles.map((f) => readFileSync(join('public', f))),
+      );
+      const source = stampServiceWorker(readFileSync('src/pwa/sw.js', 'utf8'), version, files);
+      this.emitFile({ type: 'asset', fileName: 'sw.js', source });
+    },
+  };
+}
 
 // Relative base so the build works on GitHub Pages sub-paths.
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [react(), serviceWorker()],
   build: { target: 'es2022', chunkSizeWarningLimit: 1500 },
 });

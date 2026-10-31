@@ -39,10 +39,14 @@ export function GpuWarning() {
   if (!gpu?.software || dismissed || screen === 'demo') return null;
   return (
     <div id="gpuwarn" role="alert" className={onTitle ? 'at-bottom' : undefined}>
-      <b>Hardware acceleration is off.</b> Your browser is rendering with <code>{gpu.name}</code> (software), so the sim
-      will be slow. Enable it in Chrome/Edge: <i>Settings → System → Use graphics acceleration when available</i>, then
-      restart. Check <code>chrome://gpu</code> shows “WebGL: Hardware accelerated”. On laptops, set the browser to the
-      high-performance GPU.
+      <b>Hardware acceleration is off.</b>
+      <span className="gpuwarn-more">
+        {' '}
+        Your browser is rendering with <code>{gpu.name}</code> (software), so the sim will be slow. Enable it in
+        Chrome/Edge: <i>Settings → System → Use graphics acceleration when available</i>, then restart. Check{' '}
+        <code>chrome://gpu</code> shows “WebGL: Hardware accelerated”. On laptops, set the browser to the
+        high-performance GPU.
+      </span>
       <button className="btn" onClick={dismiss}>
         Dismiss
       </button>

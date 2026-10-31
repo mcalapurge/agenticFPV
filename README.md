@@ -12,6 +12,7 @@ A browser-based FPV drone simulator in the spirit of Velocidrone and Liftoff. It
 - An abandoned-industrial map.
 - A title menu over a live autopilot demo that flies the map and throws flips, rolls and power loops.
 - Phone and tablet support: on-screen sticks, auto-detected, with a switch on the title screen to override it.
+- Installs to the home screen as a fullscreen app (no browser bars) and plays offline.
 
 It's built on Three.js, and everything works with no downloaded assets.
 
@@ -120,6 +121,12 @@ npm run test:all       # typecheck + lint + coverage + e2e (what CI runs)
   switch, and flying with two thumbs at once. Multi-touch is injected straight into Chrome through the DevTools
   protocol (`e2e/fingers.ts`), so both sticks and a button can be held together. They also check that the title
   and every settings tab fit a phone screen in landscape and portrait.
+- **PWA tests**: unit tests check the manifest, every icon's real pixel size, the iOS tags, and run the
+  service worker in a fake worker scope (install, upgrade, offline fallback, caching rules). `e2e/pwa.spec.ts`
+  checks Chrome's own installability report and that the worker caches the whole build, then **reloads with
+  the network switched off** and plays. `e2e/safe-area.spec.ts` emulates the real insets of seven common phones
+  (iPhone SE, 13 mini, 15, 14 Pro Max, Pixel 7, Galaxy S23, a compact Android) in both orientations and checks
+  that every control, readout and panel stays inside the safe area and clear of the side-swipe edges.
 - **Visual tests** (`e2e/visual.spec.ts`) compare screenshots of each settings tab. Baselines depend on
   the OS and fonts, so they're kept per platform. Run `npm run test:visual:update` to create them locally.
 
@@ -138,6 +145,7 @@ the Playwright end-to-end suite on every push and pull request.
 | **Quad classes**      | 5" freestyle, 5" race, 3" toothpick, 3" cinewhoop, 7" long range and 65 mm tiny whoop. Each class has a tune checked by tests and its own detailed procedural model: twisted-airfoil props, motor bells, ducts, FC stack, a strapped LiPo.                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | **Title menu & demo** | The app opens on a title menu (Fly, Watch demo, settings shortcuts) over a live autopilot flight. _Watch demo_ runs it full-screen with the OSD, trick call-outs and camera cuts; any key or stick movement returns. The pilot is a real stick-input autopilot: it flies a route round the map in angle mode, switches to acro for flips, rolls, power loops and a yaw spin, climbs over anything in its path and skips a trick if there is no room. It flies the quad class you picked on that class's stock tune, so your personal edits never break it and it never changes them.                                                                         |
 | **Mobile & touch**    | Phones and tablets are detected automatically and get on-screen controls: throttle + yaw on the left stick (the throttle stays where you leave it, like a radio), roll + pitch on the right, both usable at once, plus ARM, throttle cut, turtle, reset, camera, flight-mode and menu buttons, optional vibration, and a rotate-to-landscape prompt. Detection is a best guess, so the title screen has a _Touch controls_ switch that always wins (with a one-tap return to auto-detect), and a Fullscreen button where the browser allows it. The settings and title menus are laid out for small screens. A connected gamepad or radio always takes over. |
+| **Install & offline** | A web app manifest, icons and a service worker make it installable on iPhone and Android: it opens fullscreen with no browser bars and works with no signal after the first visit. The title screen shows how to install (Share → Add to Home Screen on iPhone, an Install button where the browser offers one) and hides it once installed. Every release gets a new worker that replaces the old cache. Layouts respect notches, the Dynamic Island, rounded corners, the home indicator and Android's side-swipe edges.                                                                                                                                   |
 | **Game modes**        | Free fly, Practice (endless laps, a ghost of your personal best, split deltas), Race (countdown, holeshot, N laps, missed-gate warnings, results card, local leaderboard), Track editor.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | **Tracks**            | Works Circuit, Warehouse Sprint and Tower Dive (with tilted and dive gates), plus your own tracks. Tracks can be imported and exported as JSON.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | **Replay**            | DVR of the last 90 s (`P`): seek, change speed, pause, switch camera.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -196,6 +204,25 @@ as a desktop. If detection gets it wrong, flip the **Touch controls** switch on 
 wins, and _use auto-detect_ puts detection back in charge. **Settings → Controller** also has _Auto-detect /
 Always on / Off_, throttle hold, stick size, stick expo and vibration.
 
+## Install as an app (no browser bars)
+
+A browser tab always shows its own bars. Installing the game to your home screen removes them.
+
+- **iPhone (Safari):** tap **Share** → **Add to Home Screen** → **Add**, then open **agenticFPV from your
+  home screen**. It launches fullscreen. (It must be launched from the icon; the Safari tab keeps its bars.)
+- **Android (Chrome):** use the **Install app** button on the title screen, or the browser menu **⋮ → Install
+  app / Add to Home screen**. It launches fullscreen and locked to landscape.
+- **Offline:** after the first visit the whole game is cached, so it also works with no signal. New versions
+  download in the background and take over the next time you open it online.
+- **iPhone notes:** iOS ignores the manifest's landscape lock, so rotate the phone yourself (the game shows a
+  prompt in portrait).
+
+**Safe areas.** The game draws under the notch and Dynamic Island, but keeps every control and readout inside
+the safe area (`env(safe-area-inset-*)`), clear of the home indicator, and 28 px away from the left and right
+edges where Android's back swipe starts. The insets are defined once as CSS variables in `src/ui/styles.css`.
+
+Icons come from `public/icons/*.svg`. After changing one, run `npm run make-icons` to regenerate the PNGs.
+
 ## Textures & assets
 
 Everything ships procedurally, so the repo contains no binary art:
@@ -226,6 +253,9 @@ src/
   state/                    Zod config schema, Zustand stores (config, UI, engine)
   ui/                       React: App, title menu + demo overlay, touch controls, HUD (OSD, sticks, blackbox, overlays), settings menu + tabs
 scripts/fetch-assets.ts     optional CC0 texture download (runs directly on Node)
+scripts/make-icons.ts       renders the app icon SVGs to the PNG sizes phones need
+src/pwa/                    service worker template (stamped at build) and its build helpers
+public/                     web app manifest and icons
 test/unit/                  Vitest unit tests (node; jsdom where storage is involved)
 test/component/             Vitest + Testing Library component tests (jsdom)
 e2e/                        Playwright end-to-end and visual tests
