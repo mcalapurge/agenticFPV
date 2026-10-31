@@ -285,6 +285,14 @@ describe('buttons', () => {
     expect(vibrate).toHaveBeenCalledTimes(1);
   });
 
+  it('the knobs are in the right place from the very first render (throttle 0 = bottom)', () => {
+    setup();
+    const { container } = render(<TouchControls />);
+    const knobs = container.querySelectorAll<HTMLElement>('.tc-knob');
+    expect(knobs[0].style.transform).toBe('translate(0.0px, 58.0px)');
+    expect(knobs[1].style.transform).toBe('translate(0.0px, 0.0px)');
+  });
+
   it('the knobs and throttle bar follow the stick state each frame', () => {
     setup();
     const { container } = render(<TouchControls />);

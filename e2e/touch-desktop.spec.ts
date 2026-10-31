@@ -38,7 +38,7 @@ test('desktop: off by default; the title switch turns them on; the mouse drives 
   await app.waitForFunction(() => window.__fpv!.sim.rc.pitch === 0 && window.__fpv!.sim.rc.roll === 0);
 });
 
-test('desktop: the keyboard still works when touch controls are on only if they are off', async ({ app }) => {
+test('desktop: with touch off (the default) the keyboard flies as before', async ({ app }) => {
   // Default desktop: keyboard flying, no touch UI.
   await expect(app.getByTestId('touch-controls')).toBeHidden();
   await app.keyboard.press('Space');

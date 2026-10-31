@@ -40,12 +40,11 @@ function Controls({ sim }: { sim: Simulator }) {
     if (cfg.haptics) navigator.vibrate?.(ms);
   };
 
+  const knob = (x: number, y: number) => `translate(${(x * radius).toFixed(1)}px, ${(y * radius).toFixed(1)}px)`;
+
   useSimFrame((s) => {
-    const move = (el: HTMLDivElement | null, x: number, y: number) => {
-      if (el) el.style.transform = `translate(${(x * radius).toFixed(1)}px, ${(y * radius).toFixed(1)}px)`;
-    };
-    move(leftKnob.current, touch.yaw, 1 - 2 * touch.throttle);
-    move(rightKnob.current, touch.roll, -touch.pitch);
+    if (leftKnob.current) leftKnob.current.style.transform = knob(touch.yaw, 1 - 2 * touch.throttle);
+    if (rightKnob.current) rightKnob.current.style.transform = knob(touch.roll, -touch.pitch);
     if (thrBar.current) thrBar.current.style.height = `${(touch.throttle * 100).toFixed(0)}%`;
     const armed = s.state.armed;
     const wantArm = s.input.kbArm;
@@ -89,10 +88,10 @@ function Controls({ sim }: { sim: Simulator }) {
         <div className="tc-thr">
           <div ref={thrBar} className="tc-thr-fill" />
         </div>
-        <div ref={leftKnob} className="tc-knob" />
+        <div ref={leftKnob} className="tc-knob" style={{ transform: knob(touch.yaw, 1 - 2 * touch.throttle) }} />
       </div>
       <div className="tc-ring right" aria-hidden>
-        <div ref={rightKnob} className="tc-knob" />
+        <div ref={rightKnob} className="tc-knob" style={{ transform: knob(touch.roll, -touch.pitch) }} />
       </div>
 
       <button className="tc-btn tc-menu" aria-label="Menu" onPointerDown={tap(() => ui.openMenu())}>
