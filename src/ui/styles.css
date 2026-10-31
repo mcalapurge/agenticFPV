@@ -73,7 +73,7 @@ html, body { margin: 0; height: 100%; background: #000; color: var(--text); over
 #menu.hidden { display: none; }
 .panel {
   width: min(1100px, 100%); height: min(760px, 100%); background: var(--panel); border: 1px solid var(--line);
-  border-radius: 12px; display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border-radius: 12px; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
 .panel header { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .panel header h1 { font-size: 18px; margin: 0; letter-spacing: 0.04em; }
@@ -158,11 +158,11 @@ button.btn:disabled { opacity: 0.4; cursor: default; }
 
 /* ── Title menu + demo ─────────────────────────────── */
 #title {
-  position: absolute; inset: 0; z-index: 12; display: flex; align-items: center;
+  position: absolute; inset: 0; z-index: 12; display: flex; align-items: flex-start; overflow-y: auto;
   padding: var(--inset-top) calc(var(--inset-right) + clamp(12px, 6vw, 112px)) var(--inset-bottom) calc(var(--inset-left) + clamp(12px, 6vw, 112px));
   background: linear-gradient(90deg, rgba(7,9,13,0.9) 0%, rgba(7,9,13,0.62) 36%, rgba(7,9,13,0) 72%);
 }
-.title-card { width: min(440px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.title-card { width: min(440px, 100%); display: flex; flex-direction: column; gap: 14px; margin-block: auto; }
 .title-logo { margin: 0; font-size: clamp(44px, 7vw, 80px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
 .title-logo span { color: var(--accent); }
 .title-tag { margin: 0 0 14px; color: var(--dim); font-size: 16px; letter-spacing: 0.04em; }
@@ -266,13 +266,15 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent2); fo
   .panel footer { padding: 6px 10px; }
   .panel footer .hint { display: none; }
   .body { padding: 10px 14px; }
-  .title-card { gap: 6px; }
-  .title-logo { font-size: 40px; }
-  .title-tag { margin-bottom: 6px; }
-  .title-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .title-nav button { padding: 9px 14px; font-size: 15px; }
+  .title-card { gap: 4px; }
+  .title-logo { font-size: 36px; }
+  .title-tag { display: none; }
+  .title-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .title-nav button { padding: 7px 14px; font-size: 15px; }
   .title-nav button.primary { grid-column: 1 / -1; font-size: 17px; }
-  .title-pad { margin: 2px 0 0; }
+  .title-pad { margin: 0; font-size: 12px; }
+  .title-switch { margin-top: 4px; }
+  .title-install { margin-top: 2px; }
   /* The software-rendering banner must not cover the menu on a short screen: small, bottom-right. */
   #gpuwarn .gpuwarn-more { display: none; } /* short screens: just the headline */
   #gpuwarn.at-bottom { left: auto; right: var(--inset-right); bottom: calc(var(--inset-bottom) + 2px); transform: none; max-width: 36vw; font-size: 11px; line-height: 1.3; padding: 6px 10px; }
@@ -287,3 +289,14 @@ details.title-install { display: block; }
 .title-install[open] summary::before { content: '－ '; }
 .title-install ol { margin: 6px 0 0; padding-left: 20px; line-height: 1.5; color: var(--text); }
 .title-install .title-fs { margin-left: 0; }
+
+/* Short portrait phones (e.g. 360×640): same menu, tighter. */
+@media (max-height: 700px) and (orientation: portrait) {
+  .title-card { gap: 8px; }
+  .title-logo { font-size: 44px; }
+  .title-tag { display: none; }
+  .title-nav { gap: 6px; }
+  .title-nav button { padding: 10px 16px; font-size: 16px; }
+  .title-nav button.primary { font-size: 18px; }
+  .title-switch { margin-top: 4px; }
+}
