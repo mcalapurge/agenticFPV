@@ -2,11 +2,19 @@
 
 import { fmtTime } from '../../engine/format';
 import { useUiStore } from '../../state/uiStore';
+import { useTouchEnabled } from '../hooks';
 
 export function Toasts() {
   const toast = useUiStore((s) => s.toasts.at(-1));
+  const touch = useTouchEnabled();
   return (
-    <div id="toast" role="status" aria-live="polite" className={toast ? 'show' : ''}>
+    // With touch controls the top corners hold buttons and readouts, so the toast sits lower.
+    <div
+      id="toast"
+      role="status"
+      aria-live="polite"
+      className={`${toast ? 'show' : ''}${touch ? ' touch' : ''}`.trim()}
+    >
       {toast?.message}
     </div>
   );

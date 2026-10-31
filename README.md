@@ -33,6 +33,17 @@ It's built on Three.js, and everything works with no downloaded assets.
 
 ![5" freestyle quad close-up: carbon frame, motor bells, twisted 3-blade props, strapped 6S LiPo](docs/screenshots/quad-closeup.jpg)
 
+### On a phone
+
+Touch controls switch on automatically on phones and tablets (see [Mobile & touch](#mobile--touch)).
+
+|                                                                                                 |                                                                                                             |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| ![Title menu on a phone, with the touch-controls switch](docs/screenshots/mobile-title.jpg)     | ![Flying from a phone: two sticks, throttle bar, ARM and quick buttons](docs/screenshots/mobile-flight.jpg) |
+| **Title menu**: the _Touch controls_ switch shows what was detected                             | **Flying**: left stick throttle + yaw, right stick pitch + roll, ARM and quick buttons                      |
+| ![Controller settings on a phone, with the touch options](docs/screenshots/mobile-settings.jpg) | ![Portrait: a prompt to rotate to landscape](docs/screenshots/mobile-portrait.jpg)                          |
+| **Settings** fit the screen, with touch options under _Controller_                              | **Portrait**: the game asks you to rotate                                                                   |
+
 ### Six quad classes, each with its own model and tune
 
 ![Quad classes: 5" freestyle, 5" race, 3" toothpick, 3" cinewhoop, 7" long range, 65mm tiny whoop](docs/screenshots/quad-classes.jpg)

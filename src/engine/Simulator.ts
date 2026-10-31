@@ -622,11 +622,15 @@ export class Simulator {
   }
 
   /**
-   * Run the simulation forward without rendering (tests and tooling). Flies the demo when it is active;
-   * otherwise holds whatever the sticks last were.
+   * Run the simulation forward without rendering (tests and tooling), the way the frame loop would:
+   * the demo pilot flies when it is active, otherwise the player's input (keys, touch sticks, gamepad)
+   * is read every step.
    */
   advance(seconds: number, step = 1 / 60): void {
-    for (let t = 0; t < seconds; t += step) this.tick(step);
+    for (let t = 0; t < seconds; t += step) {
+      if (!this.demoOn) this.rc = this.input.poll(step);
+      this.tick(step);
+    }
   }
 
   private frame(now: number): void {

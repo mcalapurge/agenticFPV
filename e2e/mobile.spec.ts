@@ -85,6 +85,24 @@ test.describe('flying with two thumbs', () => {
     await app.waitForFunction(() => window.__fpv!.sim.rc.throttle === 0, null, { timeout: 60_000 });
   });
 
+  test('the touch sticks drive the physics: arm, throttle up, climb (fast-forwarded, no rendering)', async ({
+    app,
+  }) => {
+    const r = await app.evaluate(() => {
+      const { sim } = window.__fpv!;
+      sim.stop();
+      sim.input.toggleArm(); // what the ARM button does
+      sim.advance(0.3);
+      const armed = sim.state.armed;
+      sim.input.touch.setLeft(0, 0.55); // what dragging the left stick up does
+      sim.advance(3);
+      return { armed, y: sim.quad.pos.y, throttle: sim.rc.throttle };
+    });
+    expect(r.armed).toBe(true);
+    expect(r.throttle).toBeCloseTo(0.55, 5);
+    expect(r.y).toBeGreaterThan(1.5);
+  });
+
   test('the quick buttons: reset, camera, flight mode, menu', async ({ app }) => {
     // Flight mode
     await expect(app.getByRole('button', { name: 'Flight mode' })).toHaveText('ACRO');
