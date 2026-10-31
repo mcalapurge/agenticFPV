@@ -226,7 +226,7 @@ button, select, input { touch-action: manipulation; }
 #osd.touch .bl, #osd.touch .br { bottom: 42%; }
 #osd.touch .tl { left: calc(var(--touch-left) - var(--inset-left) + 56px); top: 1%; }
 #osd.touch .tr { right: calc(var(--touch-right) - var(--inset-right) + 226px); top: 1%; }
-#osd.touch .tc { top: 1%; }
+#osd.touch .tc { display: none; } /* the ARM button already shows armed / disarmed */
 #toast.touch { top: 26%; max-width: 64vw; text-align: center; }
 /* Portrait is not a playing orientation: show the rotate prompt, not a cramped OSD. */
 @media (orientation: portrait) { #osd.touch { display: none; } }
