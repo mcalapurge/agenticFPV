@@ -105,7 +105,7 @@ npm run test:coverage  # Vitest with v8 coverage (HTML report in coverage/)
 npm run test:e2e       # Playwright: boots the real build in Chromium and flies it (desktop + an emulated phone)
 npm run test:mobile    # just the phone suite (Pixel 7, landscape, real multi-touch)
 npm run test:visual    # Playwright screenshot comparisons of every settings tab
-npm run test:all       # typecheck + lint + coverage + e2e (what CI runs)
+npm run test:all       # typecheck + lint + coverage + e2e (CI runs all but e2e; e2e is a manual workflow)
 ```
 
 - **Unit tests** (`test/unit/`) run the flight controller and quad physics headlessly at 1 kHz. The demo
