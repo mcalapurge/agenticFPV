@@ -107,13 +107,13 @@ function Controls({ sim }: { sim: Simulator }) {
         onEnd={() => touch.setRight(0, 0)}
       />
 
-      <div className="tc-ring left" aria-hidden>
+      <div className={`tc-ring left ${cfg.leftHeight}`} aria-hidden>
         <div className="tc-thr">
           <div ref={thrBar} className="tc-thr-fill" />
         </div>
         <div ref={leftKnob} className="tc-knob" style={{ transform: knob(touch.yaw, 1 - 2 * touch.throttle) }} />
       </div>
-      <div className="tc-ring right" aria-hidden>
+      <div className={`tc-ring right ${cfg.rightHeight}`} aria-hidden>
         <div ref={rightKnob} className="tc-knob" style={{ transform: knob(touch.roll, -touch.pitch) }} />
       </div>
 

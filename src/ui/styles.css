@@ -205,6 +205,7 @@ button, select, input { touch-action: manipulation; }
   border-radius: 50%; border: 2px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.07); display: grid; place-items: center;
   pointer-events: none;
 }
+.tc-ring.middle { bottom: auto; top: 50%; margin-top: calc(var(--tc-r) * -1); }
 .tc-ring.left { left: calc(var(--touch-left) + 4%); }
 .tc-ring.right { right: calc(var(--touch-right) + 4%); }
 .tc-knob { width: calc(var(--tc-r) * 0.66); height: calc(var(--tc-r) * 0.66); border-radius: 50%; background: rgba(255,122,26,0.88); border: 2px solid rgba(255,255,255,0.55); will-change: transform; }
@@ -226,6 +227,9 @@ button, select, input { touch-action: manipulation; }
 }
 @media (orientation: portrait) { .tc-rotate { display: block; } }
 #osd.touch .bl, #osd.touch .br { bottom: 44%; }
+/* With a stick in the middle of its side, that side's readout drops back to the bottom corner (above the swipe band). */
+#osd.touch.l-middle .bl { bottom: calc(var(--touch-bottom) + 4px); }
+#osd.touch.r-middle .br { bottom: calc(var(--touch-bottom) + 4px); }
 #osd.touch .tl { left: calc(var(--touch-left) - var(--inset-left) + 56px); top: 1%; }
 #osd.touch .tr { right: calc(var(--touch-right) - var(--inset-right) + 226px); top: 1%; }
 #osd.touch .tc { display: none; } /* the ARM button already shows armed / disarmed */

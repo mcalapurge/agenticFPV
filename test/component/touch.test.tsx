@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InputManager } from '../../src/engine/input/input';
 import type { Simulator } from '../../src/engine/Simulator';
+import { parseConfig } from '../../src/state/configSchema';
 import { useConfigStore } from '../../src/state/configStore';
 import { useEngineStore } from '../../src/state/engineStore';
 import { useUiStore } from '../../src/state/uiStore';
@@ -492,5 +493,42 @@ describe('centre ticks (haptics when a thumb crosses a stick centre)', () => {
     await userEvent.click(screen.getByLabelText('Tick when a stick crosses centre'));
     expect(cfg().input.touch.centreHaptics).toBe(false);
     expect(screen.getByText(/iPhone Safari does not allow web pages to vibrate/)).toBeInTheDocument();
+  });
+
+  describe('stick position (bottom / middle of each side)', () => {
+    const ring = (side: 'left' | 'right') => document.querySelector(`.tc-ring.${side}`)!;
+
+    it('defaults to the bottom on both sides', () => {
+      setup();
+      render(<TouchControls />);
+      expect(ring('left')).toHaveClass('bottom');
+      expect(ring('right')).toHaveClass('bottom');
+    });
+
+    it('moves each side independently', () => {
+      setup();
+      act(() => useConfigStore.getState().setPath('input.touch.rightHeight', 'middle'));
+      render(<TouchControls />);
+      expect(ring('left')).toHaveClass('bottom');
+      expect(ring('right')).toHaveClass('middle');
+    });
+
+    it('the Controller tab offers a position for each stick', async () => {
+      device('desktop');
+      useEngineStore.getState().setSim({
+        input: { listGamepads: () => [], getGamepad: () => null },
+        rc: { throttle: 0, yaw: 0, pitch: 0, roll: 0, armSwitch: false },
+        onFrame: () => () => {},
+      } as unknown as Simulator);
+      render(<ControllerTab />);
+      await userEvent.selectOptions(screen.getByLabelText('Left stick position'), 'middle');
+      await userEvent.selectOptions(screen.getByLabelText('Right stick position'), 'middle');
+      expect(cfg().input.touch.leftHeight).toBe('middle');
+      expect(cfg().input.touch.rightHeight).toBe('middle');
+    });
+
+    it('a bad stored value falls back to the bottom', () => {
+      expect(parseConfig({ input: { touch: { leftHeight: 'top' } } }).input.touch.leftHeight).toBe('bottom');
+    });
   });
 });
