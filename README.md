@@ -228,8 +228,11 @@ A browser tab always shows its own bars. Installing the game to your home screen
   prompt in portrait).
 
 **Safe areas.** The game draws under the notch and Dynamic Island, but keeps every control and readout inside
-the safe area (`env(safe-area-inset-*)`), clear of the home indicator, and 28 px away from the left and right
-edges where Android's back swipe starts. The insets are defined once as CSS variables in `src/ui/styles.css`.
+the safe area (`env(safe-area-inset-*)`), clear of the home indicator, and at least 28 px away from the left,
+right and bottom edges, where Android's back swipe and the home swipe (iPhone and Android) start. A page can't
+turn those system gestures off, so the touch zones simply stop above the bottom band: a thumb that lands there
+does nothing, and a swipe up from the very bottom is left to the phone. The insets are defined once as CSS
+variables in `src/ui/styles.css`.
 
 Icons come from `public/icons/*.svg`. After changing one, run `npm run make-icons` to regenerate the PNGs.
 

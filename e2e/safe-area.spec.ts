@@ -166,9 +166,23 @@ for (const phone of PHONES) {
       const controls = await boxes(app, ['.tc-btn', '.tc-ring', '.tc-thr', '.tc-rotate']);
       expect(controls.length, `${where}: touch controls present`).toBeGreaterThanOrEqual(8);
       expect(outside(controls, safe), `${where}: touch controls inside the safe area`).toEqual([]);
-      const edges = { left: EDGE_GESTURE, top: -1e9, right: mode.width - EDGE_GESTURE, bottom: 1e9 };
+      // Clear of the side swipe edges AND the bottom edge (a swipe up from it is the home / back gesture).
+      const edges = {
+        left: EDGE_GESTURE,
+        top: -1e9,
+        right: mode.width - EDGE_GESTURE,
+        bottom: mode.height - EDGE_GESTURE,
+      };
       const touchables = controls.filter((b) => !b.what.includes('tc-rotate'));
       expect(outside(touchables, edges), `${where}: touch controls clear of the side-swipe edges`).toEqual([]);
+
+      // The touch zones (where a thumb can land) stop above the bottom swipe band too.
+      const zones = await boxes(app, ['.tc-zone']);
+      expect(zones.length, `${where}: two touch zones`).toBe(2);
+      expect(
+        outside(zones, { left: -1e9, top: -1e9, right: 1e9, bottom: mode.height - EDGE_GESTURE }),
+        `${where}: touch zones clear of the bottom swipe band`,
+      ).toEqual([]);
 
       const osd = await boxes(app, ['#osd .el']);
       if (orientation === 'landscape') {
