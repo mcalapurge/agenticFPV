@@ -289,7 +289,7 @@ describe('buttons', () => {
     setup();
     const { container } = render(<TouchControls />);
     const knobs = container.querySelectorAll<HTMLElement>('.tc-knob');
-    expect(knobs[0].style.transform).toBe('translate(0.0px, 58.0px)');
+    expect(knobs[0].style.transform).toBe('translate(0.0px, 38.9px)');
     expect(knobs[1].style.transform).toBe('translate(0.0px, 0.0px)');
   });
 
@@ -300,8 +300,8 @@ describe('buttons', () => {
     input.touch.setRight(-1, 0);
     frameSim.runFrame();
     const knobs = container.querySelectorAll<HTMLElement>('.tc-knob');
-    expect(knobs[0].style.transform).toBe('translate(58.0px, -58.0px)'); // yaw right, throttle full
-    expect(knobs[1].style.transform).toContain('-58.0px');
+    expect(knobs[0].style.transform).toBe('translate(38.9px, -38.9px)'); // yaw right, throttle full
+    expect(knobs[1].style.transform).toContain('-38.9px');
     expect(container.querySelector<HTMLElement>('.tc-thr-fill')!.style.height).toBe('100%');
   });
 });

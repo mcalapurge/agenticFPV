@@ -11,6 +11,7 @@ import { useUiStore } from '../../state/uiStore';
 import { useSimFrame, useTouchEnabled } from '../hooks';
 
 const BASE_RADIUS = 58; // px, at size 1
+const KNOB_SIZE = 0.66; // knob diameter as a fraction of the ring radius (see .tc-knob in styles.css)
 
 export function TouchControls() {
   const sim = useSim();
@@ -47,7 +48,10 @@ function Controls({ sim }: { sim: Simulator }) {
     if (cfg.centreHaptics && hits.some(Boolean)) navigator.vibrate?.(10);
   };
 
-  const knob = (x: number, y: number) => `translate(${(x * radius).toFixed(1)}px, ${(y * radius).toFixed(1)}px)`;
+  // The knob is 0.66 of the ring radius wide, so it travels (ring radius − knob radius) to stay inside the ring:
+  // at zero throttle it must not hang below the ring into the bottom swipe band (where a thumb does nothing).
+  const travel = radius * (1 - KNOB_SIZE / 2);
+  const knob = (x: number, y: number) => `translate(${(x * travel).toFixed(1)}px, ${(y * travel).toFixed(1)}px)`;
 
   useSimFrame((s) => {
     if (leftKnob.current) leftKnob.current.style.transform = knob(touch.yaw, 1 - 2 * touch.throttle);
