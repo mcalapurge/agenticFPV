@@ -161,7 +161,7 @@ function InstallHint() {
       {platform === 'ios' ? (
         <ol>
           <li>
-            Tap <b>Share</b> <span aria-hidden>⎋</span> in Safari
+            In Safari, tap <b>Share</b> (the square with an arrow <span aria-hidden>↑</span>)
           </li>
           <li>
             Choose <b>Add to Home Screen</b>

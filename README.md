@@ -45,6 +45,12 @@ Touch controls switch on automatically on phones and tablets (see [Mobile & touc
 | ![Controller settings on a phone, with the touch options](docs/screenshots/mobile-settings.jpg) | ![Portrait: a prompt to rotate to landscape](docs/screenshots/mobile-portrait.jpg)                          |
 | **Settings** fit the screen, with touch options under _Controller_                              | **Portrait**: the game asks you to rotate                                                                   |
 
+#### Install it (fullscreen, no browser bars, works offline)
+
+|                                                                                                      |                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ![iPhone: the title shows Share → Add to Home Screen steps](docs/screenshots/mobile-install-ios.jpg) | The title screen shows how to install. On iPhone it's **Share → Add to Home Screen**; on Android it offers an **Install app** button (or the browser menu). Once installed, open it from your home screen: no Safari or Chrome bars, and it plays with no signal. See [Install as an app](#install-as-an-app-no-browser-bars). |
+
 ### Six quad classes, each with its own model and tune
 
 ![Quad classes: 5" freestyle, 5" race, 3" toothpick, 3" cinewhoop, 7" long range, 65mm tiny whoop](docs/screenshots/quad-classes.jpg)
