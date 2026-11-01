@@ -2,8 +2,8 @@
 // Left stick = throttle (relative, holds its position like a radio) + yaw; right stick = roll + pitch.
 // Fingers are tracked per pointer, so both sticks and a button can be used at the same time.
 
-import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
-import { applyExpo, stickVector, throttleFromDrag } from '../../engine/input/touch';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { applyExpo, CentreDetent, stickVector, throttleFromDrag } from '../../engine/input/touch';
 import type { Simulator } from '../../engine/Simulator';
 import { useConfigStore } from '../../state/configStore';
 import { useSim } from '../../state/engineStore';
@@ -40,6 +40,13 @@ function Controls({ sim }: { sim: Simulator }) {
     if (cfg.haptics) navigator.vibrate?.(ms);
   };
 
+  // A short tick when a thumb returns to (or crosses) a stick's centre, so you can feel where you are.
+  // (Android only: iPhone Safari has no web vibration.)
+  const [detents] = useState(() => ({ yaw: new CentreDetent(), roll: new CentreDetent(), pitch: new CentreDetent() }));
+  const tickIfCentred = (...hits: boolean[]) => {
+    if (cfg.centreHaptics && hits.some(Boolean)) navigator.vibrate?.(10);
+  };
+
   const knob = (x: number, y: number) => `translate(${(x * radius).toFixed(1)}px, ${(y * radius).toFixed(1)}px)`;
 
   useSimFrame((s) => {
@@ -70,17 +77,29 @@ function Controls({ sim }: { sim: Simulator }) {
       <Pad
         side="left"
         radius={radius}
-        onMove={(v, dragUp, start) =>
-          touch.setLeft(applyExpo(v.x, cfg.expo), throttleFromDrag(start, dragUp, radius * 2))
-        }
-        onStart={() => touch.throttle}
+        onMove={(v, dragUp, start) => {
+          touch.setLeft(applyExpo(v.x, cfg.expo), throttleFromDrag(start, dragUp, radius * 2));
+          tickIfCentred(detents.yaw.update(v.x, performance.now()));
+        }}
+        onStart={() => {
+          detents.yaw.reset();
+          return touch.throttle;
+        }}
         onEnd={() => touch.setLeft(0, cfg.throttleHold ? touch.throttle : 0)}
       />
       <Pad
         side="right"
         radius={radius}
-        onMove={(v) => touch.setRight(applyExpo(v.x, cfg.expo), applyExpo(-v.y, cfg.expo))}
-        onStart={() => 0}
+        onMove={(v) => {
+          touch.setRight(applyExpo(v.x, cfg.expo), applyExpo(-v.y, cfg.expo));
+          const now = performance.now();
+          tickIfCentred(detents.roll.update(v.x, now), detents.pitch.update(-v.y, now));
+        }}
+        onStart={() => {
+          detents.roll.reset();
+          detents.pitch.reset();
+          return 0;
+        }}
         onEnd={() => touch.setRight(0, 0)}
       />
 

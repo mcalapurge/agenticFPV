@@ -214,10 +214,12 @@ export function ControllerTab() {
           <Field kind="number" path="input.touch.size" label="Stick size" min={0.6} max={1.6} step={0.05} />
           <Field kind="number" path="input.touch.expo" label="Stick expo" min={0} max={1} step={0.05} />
           <Field kind="bool" path="input.touch.haptics" label="Vibrate on button press" />
+          <Field kind="bool" path="input.touch.centreHaptics" label="Tick when a stick crosses centre" />
         </div>
         <p className="hint">
           Left stick: throttle (drag up/down; it stays where you leave it) and yaw. Right stick: pitch and roll. Use
-          ARM, then raise the throttle. A connected gamepad or radio always takes over.
+          ARM, then raise the throttle. A connected gamepad or radio always takes over. Vibration works on Android;
+          iPhone Safari does not allow web pages to vibrate.
         </p>
       </Section>
       <div className="grid2">

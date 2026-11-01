@@ -178,7 +178,8 @@ export const ConfigSchema = section({
       throttleHold: bool(true), // throttle stays where you leave it (like a real radio) instead of springing to zero
       size: num(1, 0.6, 1.6), // stick size multiplier
       expo: num(0.35, 0, 1), // softens the centre of the roll/pitch/yaw sticks
-      haptics: bool(true),
+      haptics: bool(true), // buzz on button presses
+      centreHaptics: bool(true), // a tick when a thumb returns to / crosses a stick's centre (Android)
     }),
   }),
 });

@@ -41,6 +41,57 @@ export class TouchInput implements TouchAxes {
   }
 }
 
+/**
+ * Detects a stick returning to (or crossing) its centre, so the UI can tick a haptic pulse and the pilot can
+ * feel where their thumb is. The centre zone has hysteresis (enter below `enter`, leave above `leave`) and a
+ * minimum gap between ticks, so a thumb resting near centre does not buzz.
+ */
+export class CentreDetent {
+  private atCentre = true; // a finger starts at the stick's origin, which is the centre
+  private lastSign = 0;
+  private lastTick = -Infinity;
+  private readonly enter: number;
+  private readonly leave: number;
+  private readonly minGapMs: number;
+
+  constructor(enter = 0.04, leave = 0.1, minGapMs = 70) {
+    this.enter = enter;
+    this.leave = leave;
+    this.minGapMs = minGapMs;
+  }
+
+  /** A new finger: the stick starts centred. */
+  reset(): void {
+    this.atCentre = true;
+    this.lastSign = 0;
+  }
+
+  /** Feed the axis (-1…1) with a timestamp (ms). Returns true when a tick should fire. */
+  update(value: number, nowMs: number): boolean {
+    const mag = Math.abs(value);
+    const sign = Math.sign(value);
+    let tick = false;
+    if (this.atCentre) {
+      if (mag > this.leave) {
+        this.atCentre = false;
+        this.lastSign = sign;
+      }
+    } else if (mag < this.enter) {
+      this.atCentre = true; // came back to centre
+      tick = true;
+    } else if (sign !== this.lastSign && mag > this.leave) {
+      this.lastSign = sign; // flicked straight across without settling inside the zone
+      tick = true;
+    } else if (mag > this.leave) {
+      this.lastSign = sign;
+    }
+    if (!tick) return false;
+    if (nowMs - this.lastTick < this.minGapMs) return false;
+    this.lastTick = nowMs;
+    return true;
+  }
+}
+
 /** Soft centre for a stick: v·(1−expo) + v³·expo. */
 export function applyExpo(v: number, expo: number): number {
   const e = clamp(expo, 0, 1);

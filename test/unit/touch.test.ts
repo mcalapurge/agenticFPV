@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { detectTouchDevice, readDeviceEnv, touchEnabled, type DeviceEnv } from '../../src/engine/input/device';
 import { InputManager } from '../../src/engine/input/input';
-import { applyExpo, stickVector, throttleFromDrag, TouchInput } from '../../src/engine/input/touch';
+import { applyExpo, CentreDetent, stickVector, throttleFromDrag, TouchInput } from '../../src/engine/input/touch';
 import { DEFAULT_CONFIG } from '../../src/state/configSchema';
 
 const env = (patch: Partial<DeviceEnv>): DeviceEnv => ({
@@ -211,9 +211,54 @@ describe('touch settings', () => {
       size: 1,
       expo: 0.35,
       haptics: true,
+      centreHaptics: true,
     });
     const bad = parseConfig({ input: { touch: { mode: 'maybe', size: 99, expo: -3 } } }).input.touch;
     expect(bad).toMatchObject({ mode: 'auto', size: 1.6, expo: 0 });
     expect(parseConfig({ input: { touch: { mode: 'on' } } }).input.touch.mode).toBe('on');
+  });
+});
+
+describe('CentreDetent (the tick when a thumb returns to centre)', () => {
+  const run = (values: number[], gap = 100) => {
+    const d = new CentreDetent();
+    let t = 0;
+    return values.map((v) => d.update(v, (t += gap)));
+  };
+
+  it('is silent while moving away from centre, and ticks when the thumb comes back to it', () => {
+    expect(run([0, 0.2, 0.5, 0.8, 0.5, 0.2, 0.01])).toEqual([false, false, false, false, false, false, true]);
+  });
+
+  it('ticks when crossing straight over centre to the other side', () => {
+    expect(run([0, 0.4, 0.7, -0.4])).toEqual([false, false, false, true]);
+  });
+
+  it('works for either side, and for repeated passes', () => {
+    expect(run([0, -0.5, 0, 0.5, 0, -0.5, 0.02])).toEqual([false, false, true, false, true, false, true]);
+  });
+
+  it('does not buzz while the thumb rests or jitters inside the centre zone', () => {
+    expect(run([0, 0.03, -0.02, 0.05, 0.08, -0.06, 0.09])).toEqual([false, false, false, false, false, false, false]);
+  });
+
+  it('hysteresis: wobbling around the edge of the zone gives one tick, not a buzz', () => {
+    // out to 0.5, back to centre (tick), then 0.06 → 0.12 → 0.06 around the edge
+    expect(run([0.5, 0.0, 0.06, 0.12, 0.06, 0.12, 0.0], 100).filter(Boolean)).toHaveLength(2);
+  });
+
+  it('never ticks more often than the minimum gap', () => {
+    const d = new CentreDetent(0.04, 0.1, 70);
+    const hits = [0.5, 0, 0.5, 0, 0.5, 0].map((v, i) => d.update(v, i * 10)); // a very fast shake (50 ms)
+    expect(hits.filter(Boolean)).toHaveLength(1);
+  });
+
+  it('a new finger starts centred: no tick on landing, one when it returns', () => {
+    const d = new CentreDetent();
+    expect(d.update(0.6, 100)).toBe(false);
+    d.reset(); // lifted and landed again
+    expect(d.update(0, 300)).toBe(false);
+    expect(d.update(0.5, 400)).toBe(false);
+    expect(d.update(0, 500)).toBe(true);
   });
 });

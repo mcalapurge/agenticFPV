@@ -103,6 +103,32 @@ test.describe('flying with two thumbs', () => {
     expect(r.y).toBeGreaterThan(1.5);
   });
 
+  test('a short tick when a thumb returns to a stick centre (Android vibration)', async ({ app }) => {
+    await app.evaluate(() => {
+      const w = window as unknown as { __buzz: number[] | number[][] };
+      w.__buzz = [];
+      (navigator as unknown as { vibrate: (p: number) => boolean }).vibrate = (p) => {
+        (w.__buzz as number[]).push(p);
+        return true;
+      };
+    });
+    const buzzes = () => app.evaluate(() => (window as unknown as { __buzz: number[] }).__buzz);
+    const fingers = await Fingers.attach(app);
+
+    await fingers.down(2, ...RIGHT);
+    await fingers.drag(2, RIGHT, [RIGHT[0] + R * 0.8, RIGHT[1]]); // out to the right: nothing
+    await app.waitForFunction(() => window.__fpv!.sim.rc.roll > 0.3);
+    expect(await buzzes()).toEqual([]);
+
+    await fingers.drag(2, [RIGHT[0] + R * 0.8, RIGHT[1]], RIGHT); // back to centre: one short tick
+    await app.waitForFunction(() => window.__fpv!.sim.rc.roll === 0);
+    expect(await buzzes()).toEqual([10]);
+
+    await fingers.drag(2, RIGHT, [RIGHT[0] - R * 0.8, RIGHT[1]]); // out to the left: still nothing new
+    await fingers.up(2);
+    expect(await buzzes()).toEqual([10]);
+  });
+
   test('the quick buttons: reset, camera, flight mode, menu', async ({ app }) => {
     // Flight mode
     await expect(app.getByRole('button', { name: 'Flight mode' })).toHaveText('ACRO');

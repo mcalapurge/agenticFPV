@@ -381,3 +381,116 @@ describe('demo and controller tab on touch', () => {
     expect(cfg().input.touch.size).toBe(1.3);
   });
 });
+
+describe('centre ticks (haptics when a thumb crosses a stick centre)', () => {
+  const R = 58;
+  const vibrate = () => navigator.vibrate as unknown as ReturnType<typeof vi.fn>;
+
+  // The detector rate-limits by wall-clock time; give it a clock that moves 100 ms per reading so the tests
+  // do not depend on how fast the machine is.
+  let clock = 0;
+  beforeEach(() => {
+    clock = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => (clock += 100));
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('right stick: silent while pushing out, one tick when the thumb returns to centre', () => {
+    setup();
+    render(<TouchControls />);
+    const pad = screen.getByTestId('touch-pad-right');
+    pointer(pad, 'pointerDown', 700, 300);
+    pointer(pad, 'pointerMove', 700 + R / 2, 300);
+    pointer(pad, 'pointerMove', 700 + R, 300);
+    expect(vibrate()).not.toHaveBeenCalled();
+    pointer(pad, 'pointerMove', 700 + R / 2, 300);
+    expect(vibrate()).not.toHaveBeenCalled();
+    pointer(pad, 'pointerMove', 700, 300); // back home
+    expect(vibrate()).toHaveBeenCalledTimes(1);
+    expect(vibrate()).toHaveBeenCalledWith(10);
+  });
+
+  it('pitch counts too, and roll + pitch crossing together is a single pulse, not two', () => {
+    setup();
+    render(<TouchControls />);
+    const pad = screen.getByTestId('touch-pad-right');
+    pointer(pad, 'pointerDown', 700, 300);
+    pointer(pad, 'pointerMove', 700, 300 - R); // forward only
+    pointer(pad, 'pointerMove', 700, 300);
+    expect(vibrate()).toHaveBeenCalledTimes(1);
+    pointer(pad, 'pointerMove', 700 + R, 300 - R); // diagonal out
+    pointer(pad, 'pointerMove', 700, 300); // both axes back to centre at once
+    expect(vibrate()).toHaveBeenCalledTimes(2);
+  });
+
+  it('flicking straight across centre ticks once', () => {
+    setup();
+    render(<TouchControls />);
+    const pad = screen.getByTestId('touch-pad-right');
+    pointer(pad, 'pointerDown', 700, 300);
+    pointer(pad, 'pointerMove', 700 + R, 300);
+    pointer(pad, 'pointerMove', 700 - R, 300);
+    expect(vibrate()).toHaveBeenCalledTimes(1);
+  });
+
+  it('left stick: yaw ticks; throttle (up/down) never does', () => {
+    setup();
+    render(<TouchControls />);
+    const pad = screen.getByTestId('touch-pad-left');
+    pointer(pad, 'pointerDown', 100, 300);
+    pointer(pad, 'pointerMove', 100, 300 - 2 * R); // full throttle
+    pointer(pad, 'pointerMove', 100, 300 + R); // and back down
+    expect(vibrate()).not.toHaveBeenCalled();
+    pointer(pad, 'pointerMove', 100 + R, 300);
+    pointer(pad, 'pointerMove', 100, 300); // yaw back to centre
+    expect(vibrate()).toHaveBeenCalledTimes(1);
+  });
+
+  it('a new finger starts centred: landing never ticks', () => {
+    setup();
+    render(<TouchControls />);
+    const pad = screen.getByTestId('touch-pad-right');
+    pointer(pad, 'pointerDown', 700, 300);
+    pointer(pad, 'pointerMove', 700 + R, 300);
+    pointer(pad, 'pointerUp', 700 + R, 300);
+    pointer(pad, 'pointerDown', 650, 250);
+    expect(vibrate()).not.toHaveBeenCalled();
+  });
+
+  it('can be switched off, independently of the button vibration', () => {
+    setup();
+    act(() => useConfigStore.getState().setPath('input.touch.centreHaptics', false));
+    render(<TouchControls />);
+    const pad = screen.getByTestId('touch-pad-right');
+    pointer(pad, 'pointerDown', 700, 300);
+    pointer(pad, 'pointerMove', 700 + R, 300);
+    pointer(pad, 'pointerMove', 700, 300);
+    expect(vibrate()).not.toHaveBeenCalled();
+    pointer(screen.getByRole('button', { name: 'Reset' }), 'pointerDown', 0, 0); // buttons still buzz
+    expect(vibrate()).toHaveBeenCalledTimes(1);
+  });
+
+  it('is harmless where the browser cannot vibrate (iPhone Safari)', () => {
+    setup();
+    Object.defineProperty(navigator, 'vibrate', { value: undefined, configurable: true });
+    render(<TouchControls />);
+    const pad = screen.getByTestId('touch-pad-right');
+    pointer(pad, 'pointerDown', 700, 300);
+    pointer(pad, 'pointerMove', 700 + R, 300);
+    expect(() => pointer(pad, 'pointerMove', 700, 300)).not.toThrow();
+    expect(input.touch.roll).toBe(0);
+  });
+
+  it('the Controller tab offers the option and explains the iPhone limit', async () => {
+    device('desktop');
+    useEngineStore.getState().setSim({
+      input: { listGamepads: () => [], getGamepad: () => null },
+      rc: { throttle: 0, yaw: 0, pitch: 0, roll: 0, armSwitch: false },
+      onFrame: () => () => {},
+    } as unknown as Simulator);
+    render(<ControllerTab />);
+    await userEvent.click(screen.getByLabelText('Tick when a stick crosses centre'));
+    expect(cfg().input.touch.centreHaptics).toBe(false);
+    expect(screen.getByText(/iPhone Safari does not allow web pages to vibrate/)).toBeInTheDocument();
+  });
+});
