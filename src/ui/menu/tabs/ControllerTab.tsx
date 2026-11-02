@@ -210,6 +210,18 @@ export function ControllerTab() {
             label="On-screen sticks"
             options={{ auto: 'Auto-detect', on: 'Always on', off: 'Off' }}
           />
+          <Field
+            kind="select"
+            path="input.touch.leftHeight"
+            label="Left stick position"
+            options={{ bottom: 'Bottom', middle: 'Middle' }}
+          />
+          <Field
+            kind="select"
+            path="input.touch.rightHeight"
+            label="Right stick position"
+            options={{ bottom: 'Bottom', middle: 'Middle' }}
+          />
           <Field kind="bool" path="input.touch.throttleHold" label="Throttle holds position" />
           <Field kind="number" path="input.touch.size" label="Stick size" min={0.6} max={1.6} step={0.05} />
           <Field kind="number" path="input.touch.expo" label="Stick expo" min={0} max={1} step={0.05} />

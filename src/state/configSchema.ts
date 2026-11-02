@@ -47,6 +47,7 @@ export const RATE_TYPES = ['actual', 'betaflight'] as const;
 export const FLIGHT_MODES = ['acro', 'angle'] as const;
 export const VTX_POWERS = [25, 200, 600, 1000] as const;
 export const TOUCH_MODES = ['auto', 'on', 'off'] as const;
+export const TOUCH_HEIGHTS = ['bottom', 'middle'] as const;
 
 export const ConfigSchema = section({
   quad: section({ preset: str('freestyle5') }),
@@ -180,6 +181,8 @@ export const ConfigSchema = section({
       expo: num(0.35, 0, 1), // softens the centre of the roll/pitch/yaw sticks
       haptics: bool(true), // buzz on button presses
       centreHaptics: bool(true), // a tick when a thumb returns to / crosses a stick's centre (Android)
+      leftHeight: choice(TOUCH_HEIGHTS, 'bottom'), // where the left (throttle / yaw) stick sits on its side of the screen
+      rightHeight: choice(TOUCH_HEIGHTS, 'bottom'), // same for the right (roll / pitch) stick
     }),
   }),
 });
@@ -196,6 +199,7 @@ export type GameMode = (typeof GAME_MODES)[number];
 export type CameraMode = (typeof CAMERA_MODES)[number];
 export type TimeOfDay = (typeof TIMES_OF_DAY)[number];
 export type TouchMode = (typeof TOUCH_MODES)[number];
+export type TouchHeight = (typeof TOUCH_HEIGHTS)[number];
 
 /** Validate anything (stored JSON, imported file, partial object) into a complete Config. */
 export function parseConfig(input: unknown): Config {

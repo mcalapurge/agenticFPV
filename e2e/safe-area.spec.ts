@@ -63,6 +63,7 @@ const PHONES: Phone[] = [
 ];
 
 const EDGE_GESTURE = 24; // px: touch controls stay this far from the left/right edges (Android back swipe)
+const BOTTOM_BAND = 28; // px: minimum bottom band where a thumb does nothing (home / back swipe starts there)
 
 interface Box {
   what: string;
@@ -144,6 +145,8 @@ for (const phone of PHONES) {
       const mode = phone[orientation];
       const safe = safeRect(mode);
       const where = `${phone.name} ${orientation}`;
+      // The band is the larger of the minimum and this device's own bottom inset (home indicator).
+      const bottomBand = Math.max(BOTTOM_BAND, mode.insets.bottom);
       await setMode(app, mode);
 
       // Title menu: every button, the switch and the status line inside the safe area.
@@ -166,9 +169,31 @@ for (const phone of PHONES) {
       const controls = await boxes(app, ['.tc-btn', '.tc-ring', '.tc-thr', '.tc-rotate']);
       expect(controls.length, `${where}: touch controls present`).toBeGreaterThanOrEqual(8);
       expect(outside(controls, safe), `${where}: touch controls inside the safe area`).toEqual([]);
-      const edges = { left: EDGE_GESTURE, top: -1e9, right: mode.width - EDGE_GESTURE, bottom: 1e9 };
+      // Clear of the side swipe edges AND the bottom edge (a swipe up from it is the home / back gesture).
+      const edges = {
+        left: EDGE_GESTURE,
+        top: -1e9,
+        right: mode.width - EDGE_GESTURE,
+        bottom: mode.height - bottomBand,
+      };
       const touchables = controls.filter((b) => !b.what.includes('tc-rotate'));
       expect(outside(touchables, edges), `${where}: touch controls clear of the side-swipe edges`).toEqual([]);
+
+      // The touch zones (where a thumb can land) stop above the bottom swipe band too.
+      const zones = await boxes(app, ['.tc-zone']);
+      expect(zones.length, `${where}: two touch zones`).toBe(2);
+      expect(
+        outside(zones, { left: -1e9, top: -1e9, right: 1e9, bottom: mode.height - bottomBand }),
+        `${where}: touch zones clear of the bottom swipe band`,
+      ).toEqual([]);
+
+      // The stick knobs (what a thumb aims at) must not hang down into that band either, even at zero throttle.
+      const knobs = await boxes(app, ['.tc-knob']);
+      expect(knobs.length, `${where}: two knobs`).toBe(2);
+      expect(
+        outside(knobs, { left: -1e9, top: -1e9, right: 1e9, bottom: mode.height - bottomBand }),
+        `${where}: stick knobs stay out of the bottom swipe band`,
+      ).toEqual([]);
 
       const osd = await boxes(app, ['#osd .el']);
       if (orientation === 'landscape') {

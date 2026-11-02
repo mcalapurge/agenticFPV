@@ -11,6 +11,8 @@ export function Osd() {
   const screen = useUiStore((s) => s.screen);
   const show = configured && screen !== 'title';
   const touch = useTouchEnabled() && screen === 'playing';
+  const leftHeight = useConfigStore((s) => s.config.input.touch.leftHeight);
+  const rightHeight = useConfigStore((s) => s.config.input.touch.rightHeight);
   const refs = useRef<Partial<Record<Slot, HTMLDivElement | null>>>({});
   useSimFrame((sim) => {
     const text = osdText(sim);
@@ -26,7 +28,7 @@ export function Osd() {
     <div
       id="osd"
       data-testid="osd"
-      className={touch ? 'touch' : undefined}
+      className={touch ? `touch l-${leftHeight} r-${rightHeight}` : undefined}
       style={{ display: show ? undefined : 'none' }}
     >
       {SLOTS.map((k) => (

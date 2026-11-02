@@ -21,6 +21,8 @@
   /* Controls you touch keep clear of the side edges too: Android's back swipe starts there. */
   --touch-left: max(var(--safe-left), 28px);
   --touch-right: max(var(--safe-right), 28px);
+  /* The bottom edge too: a swipe up from it is the home / back gesture, so nothing you hold sits down there. */
+  --touch-bottom: max(var(--safe-bottom), 28px);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 * { box-sizing: border-box; }
@@ -195,14 +197,15 @@ button, select, input { touch-action: manipulation; }
   position: absolute; inset: 0; z-index: 11; pointer-events: none;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
-.tc-zone { position: absolute; bottom: 0; width: 46%; height: 70%; pointer-events: auto; touch-action: none; }
+.tc-zone { position: absolute; top: 30%; bottom: var(--touch-bottom); width: 46%; pointer-events: auto; touch-action: none; }
 .tc-zone.left { left: 0; }
 .tc-zone.right { right: 0; }
 .tc-ring {
-  position: absolute; bottom: calc(var(--inset-bottom) + 6%); width: calc(var(--tc-r) * 2); height: calc(var(--tc-r) * 2);
+  position: absolute; bottom: calc(var(--touch-bottom) + 12px); width: calc(var(--tc-r) * 2); height: calc(var(--tc-r) * 2);
   border-radius: 50%; border: 2px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.07); display: grid; place-items: center;
   pointer-events: none;
 }
+.tc-ring.middle { bottom: auto; top: 50%; margin-top: calc(var(--tc-r) * -1); }
 .tc-ring.left { left: calc(var(--touch-left) + 4%); }
 .tc-ring.right { right: calc(var(--touch-right) + 4%); }
 .tc-knob { width: calc(var(--tc-r) * 0.66); height: calc(var(--tc-r) * 0.66); border-radius: 50%; background: rgba(255,122,26,0.88); border: 2px solid rgba(255,255,255,0.55); will-change: transform; }
@@ -217,13 +220,16 @@ button, select, input { touch-action: manipulation; }
 .tc-btn.arm { min-width: 118px; height: 54px; font-size: 16px; border-radius: 27px; }
 .tc-menu { position: absolute; top: calc(var(--inset-top) + 4px); left: var(--touch-left); font-size: 18px; }
 .tc-top-right { position: absolute; top: calc(var(--inset-top) + 4px); right: var(--touch-right); display: flex; gap: 8px; }
-.tc-bottom { position: absolute; bottom: calc(var(--inset-bottom) + 6px); left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: flex-end; }
+.tc-bottom { position: absolute; bottom: calc(var(--touch-bottom) + 2px); left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: flex-end; }
 .tc-rotate {
   display: none; position: absolute; top: calc(var(--inset-top) + 14%); left: 50%; transform: translateX(-50%); width: max-content; max-width: 86vw; text-align: center;
   padding: 8px 14px; border-radius: 10px; background: rgba(14,16,20,0.8); border: 1px solid var(--accent); font-size: 14px;
 }
 @media (orientation: portrait) { .tc-rotate { display: block; } }
-#osd.touch .bl, #osd.touch .br { bottom: 42%; }
+#osd.touch .bl, #osd.touch .br { bottom: 44%; }
+/* With a stick in the middle of its side, that side's readout drops back to the bottom corner (above the swipe band). */
+#osd.touch.l-middle .bl { bottom: calc(var(--touch-bottom) + 4px); }
+#osd.touch.r-middle .br { bottom: calc(var(--touch-bottom) + 4px); }
 #osd.touch .tl { left: calc(var(--touch-left) - var(--inset-left) + 56px); top: 1%; }
 #osd.touch .tr { right: calc(var(--touch-right) - var(--inset-right) + 226px); top: 1%; }
 #osd.touch .tc { display: none; } /* the ARM button already shows armed / disarmed */

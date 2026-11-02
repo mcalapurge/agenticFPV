@@ -212,6 +212,8 @@ describe('touch settings', () => {
       expo: 0.35,
       haptics: true,
       centreHaptics: true,
+      leftHeight: 'bottom',
+      rightHeight: 'bottom',
     });
     const bad = parseConfig({ input: { touch: { mode: 'maybe', size: 99, expo: -3 } } }).input.touch;
     expect(bad).toMatchObject({ mode: 'auto', size: 1.6, expo: 0 });

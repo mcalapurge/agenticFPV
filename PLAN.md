@@ -147,7 +147,7 @@ environment's network policy, so real photo textures are fetched by a script the
   end-to-end (boot, flight, crash, settings → engine → reload, race with gates crossed through the real
   loop, practice PB/ghost, track editor, replay) on SwiftShader in ~11 min; 9 visual baselines (settings
   tabs, ≤20 px tolerance, mutation-checked). Found and fixed: throttle-cut tap lost between polls at low
-  frame rates. CI workflow runs typecheck, lint, format, Vitest + coverage, build and the e2e suite.
+  frame rates. CI workflow runs typecheck, lint, format, Vitest + coverage, and build; the e2e suite is a separate manually-triggered workflow (e2e.yml).
 - **M20 Title menu + demo.** Title menu (Fly, Watch demo, settings shortcuts) opens over a live autopilot flight;
   `Screen` state (title / demo / playing) in the UI store drives the simulator. `DemoPilot` is a pure
   stick-input autopilot: angle-mode route following with a velocity→tilt controller, acro flips / rolls /

@@ -49,16 +49,20 @@ test.describe('title menu', () => {
 
   test('starting to fly leaves no trace of the demo (replay, record, settings)', async ({ titleApp: app }) => {
     const before = await app.evaluate(() => JSON.stringify(window.__fpv!.config()));
-    await app.evaluate(() => window.__fpv!.sim.advance(30));
-    await app.getByRole('button', { name: /^Fly/ }).click();
-    const after = await app.evaluate(() => ({
-      config: JSON.stringify(window.__fpv!.config()),
-      replay: window.__fpv!.sim.replay.count,
-      records: localStorage.getItem('agenticfpv.records.v1'),
-    }));
-    expect(after.config).toBe(before);
-    expect(after.replay).toBe(0);
-    expect(after.records).toBeNull();
+    // Hand over and read in the same instant: once you are flying, the replay rightly starts recording YOUR
+    // flight, and on a fast machine a few frames pass between a click and a later read.
+    const r = await app.evaluate(() => {
+      const { sim, ui } = window.__fpv!;
+      sim.advance(30); // the demo has been recording
+      const demoFootage = sim.replay.count;
+      ui.getState().setScreen('playing');
+      return { demoFootage, replay: sim.replay.count, records: localStorage.getItem('agenticfpv.records.v1') };
+    });
+    expect(r.demoFootage, 'the demo itself does not record either').toBe(0);
+    expect(r.replay).toBe(0);
+    expect(r.records).toBeNull();
+    expect(await app.evaluate(() => JSON.stringify(window.__fpv!.config()))).toBe(before);
+    await expect(app.getByTestId('title')).toBeHidden();
   });
 
   test('handing over drops the pilot’s stick positions at once', async ({ titleApp: app }) => {

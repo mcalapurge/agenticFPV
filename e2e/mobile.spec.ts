@@ -129,6 +129,61 @@ test.describe('flying with two thumbs', () => {
     expect(await buzzes()).toEqual([10]);
   });
 
+  test('a thumb in the bottom swipe band does nothing, so the system home gesture cannot be mistaken for throttle', async ({
+    app,
+  }) => {
+    const height = app.viewportSize()!.height;
+    const fingers = await Fingers.attach(app);
+
+    // Landing in the bottom band (where the phone's home / back swipe starts) and swiping up: not our stick.
+    await fingers.down(1, LEFT[0], height - 8);
+    await fingers.drag(1, [LEFT[0], height - 8], [LEFT[0], height - 8 - R * 2]);
+    await fingers.up(1);
+    expect(await app.evaluate(() => window.__fpv!.sim.input.touch.throttle)).toBe(0);
+
+    // Just above the band, the same swipe is the throttle.
+    const y = height - 40;
+    await fingers.down(1, LEFT[0], y);
+    await fingers.drag(1, [LEFT[0], y], [LEFT[0], y - R * 2]);
+    await app.waitForFunction(() => window.__fpv!.sim.input.touch.throttle > 0.8);
+    await fingers.up(1);
+  });
+
+  test('sticks can sit in the middle of their side, clear of the bottom band, and still fly', async ({ app }) => {
+    const { width, height } = app.viewportSize()!;
+    const ring = (side: string) => app.locator(`.tc-ring.${side}`);
+    const bottomOf = async (side: string) =>
+      (await ring(side).boundingBox())!.y + (await ring(side).boundingBox())!.height;
+
+    const lowBottom = await bottomOf('left');
+    await app.evaluate(() =>
+      window.__fpv!.update((c) => {
+        c.input.touch.leftHeight = 'middle';
+        c.input.touch.rightHeight = 'middle';
+      }),
+    );
+    for (const side of ['left', 'right']) {
+      await expect(ring(side)).toHaveClass(/middle/);
+      const box = (await ring(side).boundingBox())!;
+      expect(box.y + box.height / 2).toBeCloseTo(height / 2, 0); // centred vertically
+      expect(box.y + box.height).toBeLessThan(lowBottom - 20); // well above where it was
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+    // The readouts drop to the free bottom corners instead of sitting on the sticks.
+    const osd = await app.getByTestId('osd-bl').boundingBox();
+    const left = (await ring('left').boundingBox())!;
+    expect(osd!.y).toBeGreaterThan(left.y + left.height - 1);
+    expect(await bottomOf('right')).toBeLessThan(lowBottom - 20);
+
+    // Moved sticks still fly: raise the throttle, steer.
+    const fingers = await Fingers.attach(app);
+    await fingers.down(1, LEFT[0], 300);
+    await fingers.drag(1, [LEFT[0], 300], [LEFT[0], 300 - R * 2]);
+    await app.waitForFunction(() => window.__fpv!.sim.input.touch.throttle > 0.8);
+    await fingers.up(1);
+  });
+
   test('the quick buttons: reset, camera, flight mode, menu', async ({ app }) => {
     // Flight mode
     await expect(app.getByRole('button', { name: 'Flight mode' })).toHaveText('ACRO');
